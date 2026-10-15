@@ -81,7 +81,7 @@ class _HalamanRegistrasiState extends State<HalamanRegistrasi> {
 
   @override
   Widget build(BuildContext context) {
-    const primaryColor = Color(0xFF1E3A8A); // Warna biru tua utama Figma
+    const primaryColor = Color(0xFF1E3A8A); // Warna biru tua
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),

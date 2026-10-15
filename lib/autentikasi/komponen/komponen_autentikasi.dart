@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+const primaryDarkBlue = Color(0xFF1E3A8A); // Tema biru tua seragam Figma
+
 // Component header logo KarangKita
 class HeaderLogoKarangKita extends StatelessWidget {
   const HeaderLogoKarangKita({super.key});
@@ -11,13 +13,13 @@ class HeaderLogoKarangKita extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.blueAccent.shade100.withOpacity(0.2),
+            color: primaryDarkBlue.withOpacity(0.12),
             shape: BoxShape.circle,
           ),
           child: const Icon(
             Icons.people_alt_rounded,
             size: 64,
-            color: Colors.blueAccent,
+            color: primaryDarkBlue,
           ),
         ),
         const SizedBox(height: 12),
@@ -26,7 +28,7 @@ class HeaderLogoKarangKita extends StatelessWidget {
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
-            color: Colors.blueAccent,
+            color: primaryDarkBlue,
             letterSpacing: 0.8,
           ),
         ),
@@ -76,26 +78,29 @@ class InputFieldCustom extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        prefixIcon: Icon(prefixIcon, color: Colors.blueAccent),
+        prefixIcon: Icon(prefixIcon, color: const Color(0xFF64748B)),
         suffixIcon: isPassword
             ? IconButton(
                 icon: Icon(
                   isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                  color: Colors.grey,
+                  color: const Color(0xFF64748B),
                 ),
                 onPressed: onToggleVisibility,
               )
             : null,
+        filled: true,
+        fillColor: Colors.white,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.blueAccent, width: 2),
+          borderSide: const BorderSide(color: primaryDarkBlue, width: 1.5),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
@@ -120,21 +125,21 @@ class TombolUtama extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 48,
+      height: 50,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blueAccent,
+          backgroundColor: primaryDarkBlue,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          elevation: 2,
+          elevation: 0,
         ),
         child: isLoading
             ? const SizedBox(
-                width: 24,
-                height: 24,
+                width: 22,
+                height: 22,
                 child: CircularProgressIndicator(
                   color: Colors.white,
                   strokeWidth: 2.5,
@@ -143,7 +148,7 @@ class TombolUtama extends StatelessWidget {
             : Text(
                 text,
                 style: const TextStyle(
-                  fontSize: 16,
+                  fontSize: 15,
                   fontWeight: FontWeight.bold,
                 ),
               ),
