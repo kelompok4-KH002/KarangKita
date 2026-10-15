@@ -146,7 +146,7 @@ class _BerandaTabContent extends StatelessWidget {
 
             // 4 Quick Access Icons (Pindah Tab Langsung)
             Row(
-              mainAxisAlignment: Main.spaceAround,
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildQuickIcon(Icons.event_note, 'Kegiatan', () {
                   parentState?.setState(() => parentState._currentIndex = 1);
@@ -166,7 +166,7 @@ class _BerandaTabContent extends StatelessWidget {
 
             // Section Kegiatan terdekat
             Row(
-              mainAxisAlignment: Main.spaceEvenly,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Expanded(
                   child: Text(
