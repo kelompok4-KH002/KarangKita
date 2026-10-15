@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../layanan/pengalihan_role.dart';
 import 'halaman_login.dart';
 
 // Halaman Registrasi Akun Terpadu (Slicing High-Fidelity Figma)
@@ -22,6 +23,7 @@ class _HalamanRegistrasiState extends State<HalamanRegistrasi> {
   final _passwordController = TextEditingController();
 
   bool _isPasswordVisible = false;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -33,18 +35,46 @@ class _HalamanRegistrasiState extends State<HalamanRegistrasi> {
   }
 
   // Fungsi submit pendaftaran
-  void _prosesDaftar() {
-    if (_formKey.currentState!.validate()) {
+  void _prosesDaftar() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    final hasil = await LayananAutentikasi.daftar(
+      nama: _namaController.text,
+      username: _usernameController.text,
+      whatsapp: _whatsappController.text,
+      password: _passwordController.text,
+      peranString: _peranTerpilih,
+    );
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (!mounted) return;
+
+    if (hasil.sukses) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Pendaftaran akun $_peranTerpilih berhasil! Silakan login.'),
+          content: Text('Registrasi berhasil! Silakan login dengan username: ${_usernameController.text.trim()}'),
           backgroundColor: const Color(0xFF1E3A8A),
         ),
       );
-      // Kembali ke halaman login setelah daftar
+
+      // Kembali ke halaman login
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const HalamanLogin()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(hasil.pesan),
+          backgroundColor: Colors.redAccent,
+        ),
       );
     }
   }
@@ -78,7 +108,7 @@ class _HalamanRegistrasiState extends State<HalamanRegistrasi> {
                     ),
                   ),
                   const Text(
-                    'REGISTRASI',
+                    '',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
@@ -269,7 +299,7 @@ class _HalamanRegistrasiState extends State<HalamanRegistrasi> {
                         width: double.infinity,
                         height: 50,
                         child: ElevatedButton(
-                          onPressed: _prosesDaftar,
+                          onPressed: _isLoading ? null : _prosesDaftar,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: primaryColor,
                             foregroundColor: Colors.white,
@@ -278,17 +308,23 @@ class _HalamanRegistrasiState extends State<HalamanRegistrasi> {
                             ),
                             elevation: 0,
                           ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'Daftar Sekarang',
-                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                              ),
-                              SizedBox(width: 8),
-                              Icon(Icons.arrow_forward, size: 18),
-                            ],
-                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                )
+                              : const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'Daftar Sekarang',
+                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                                    ),
+                                    SizedBox(width: 8),
+                                    Icon(Icons.arrow_forward, size: 18),
+                                  ],
+                                ),
                         ),
                       ),
                       const SizedBox(height: 24),
