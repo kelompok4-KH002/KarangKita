@@ -19,7 +19,7 @@ class ModelJadwalAdmin {
   });
 }
 
-// Data awal contoh jadwal admin
+// Data awal contoh
 final List<ModelJadwalAdmin> dataJadwalAdminAwal = [
   ModelJadwalAdmin(
     id: 'J1',

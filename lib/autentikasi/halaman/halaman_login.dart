@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../komponen/komponen_autentikasi.dart';
 import '../layanan/pengalihan_role.dart';
+import 'halaman_registrasi.dart';
 import '../../kegiatan/admin/halaman/halaman_beranda_admin.dart';
 
-// Halaman Login utama aplikasi
+// Halaman Login utama aplikasi (High-Fidelity)
 class HalamanLogin extends StatefulWidget {
   const HalamanLogin({super.key});
 
@@ -14,7 +15,7 @@ class HalamanLogin extends StatefulWidget {
 class _HalamanLoginState extends State<HalamanLogin> {
   // Key form untuk validasi input
   final _formKey = GlobalKey<FormState>();
-  
+
   // Controller input username dan password
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -65,7 +66,10 @@ class _HalamanLoginState extends State<HalamanLogin> {
 
   @override
   Widget build(BuildContext context) {
+    const primaryColor = Color(0xFF1E3A8A); // Tema biru tua seragam Figma
+
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -145,6 +149,34 @@ class _HalamanLoginState extends State<HalamanLogin> {
                     text: 'Masuk Ke Sistem',
                     onPressed: _prosesLogin,
                     isLoading: _isLoading,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Footer Link ke Registrasi
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'Belum punya akun? ',
+                        style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const HalamanRegistrasi()),
+                          );
+                        },
+                        child: const Text(
+                          'Daftar Akun',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: primaryColor,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
