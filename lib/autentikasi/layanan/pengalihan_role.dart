@@ -32,7 +32,7 @@ class HasilAutentikasi {
 }
 
 class LayananAutentikasi {
-  // Storage memori lokal
+  // data user lokal
   static final List<ModelPengguna> _daftarPenggunaLokal = [
     ModelPengguna(
       nama: 'Administrator',
@@ -43,7 +43,7 @@ class LayananAutentikasi {
     ),
   ];
 
-  // Registrasi Akun Baru ke Firebase Auth & Cloud Firestore
+  // daftarkan akun baru
   static Future<HasilAutentikasi> daftar({
     required String nama,
     required String username,
@@ -61,7 +61,6 @@ class LayananAutentikasi {
       );
     }
 
-    // Role Pengurus memerlukan ACC dari Admin Utama
     bool butuhPersetujuanAdmin = (peranString == 'Pengurus');
 
     RolePengguna role = RolePengguna.anggota;
@@ -74,13 +73,13 @@ class LayananAutentikasi {
     final emailSynthetis = u.contains('@') ? u : '$u@karangkita.app';
 
     try {
-      // 1. Buat User di Firebase Authentication
+      // simpan ke firebase auth
       final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: emailSynthetis,
         password: p,
       );
 
-      // 2. Simpan Data Profil Pengguna di Firestore beserta status persetujuan
+      // simpan data profil ke firestore
       if (cred.user != null) {
         await FirebaseFirestore.instance.collection('users').doc(cred.user!.uid).set({
           'uid': cred.user!.uid,
@@ -88,12 +87,11 @@ class LayananAutentikasi {
           'username': u,
           'whatsapp': whatsapp,
           'role': peranString,
-          'disetujui': !butuhPersetujuanAdmin, // Pengurus = false (pending ACC)
+          'disetujui': !butuhPersetujuanAdmin,
           'createdAt': FieldValue.serverTimestamp(),
         });
       }
     } catch (e) {
-      // Fallback lokal
       _daftarPenggunaLokal.add(ModelPengguna(
         nama: nama,
         username: u,
@@ -115,7 +113,7 @@ class LayananAutentikasi {
     );
   }
 
-  // Login Akun via Firebase Auth & Pengecekan Akses Firestore
+  // verifikasi login
   static Future<HasilAutentikasi> login({
     required String username,
     required String password,
@@ -133,21 +131,20 @@ class LayananAutentikasi {
     final emailSynthetis = u.contains('@') ? u : '$u@karangkita.app';
 
     try {
-      // 1. Coba Login via Firebase Auth
+      // login auth
       final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: emailSynthetis,
         password: p,
       );
 
       if (cred.user != null) {
-        // Ambil data profil & status persetujuan dari Firestore
+        // cek status disetujui di firestore
         final doc = await FirebaseFirestore.instance.collection('users').doc(cred.user!.uid).get();
 
         if (doc.exists) {
           final isDisetujui = doc.data()?['disetujui'] ?? true;
           final roleStr = doc.data()?['role'] ?? 'Pengurus';
 
-          // Jika akun Pengurus belum di-ACC oleh Admin Utama
           if (!isDisetujui && roleStr == 'Pengurus') {
             return HasilAutentikasi(
               sukses: false,
@@ -167,7 +164,6 @@ class LayananAutentikasi {
         }
       }
     } catch (e) {
-      // Fallback pengecekan lokal & admin default
       final userIdx = _daftarPenggunaLokal.indexWhere(
         (acc) => acc.username.toLowerCase() == u && acc.password == p,
       );
