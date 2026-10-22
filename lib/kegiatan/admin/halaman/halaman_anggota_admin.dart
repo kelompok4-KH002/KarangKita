@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ModelAnggotaAdmin {
   final String id;
   final String nama;
   final String jabatan;
+  final bool disetujui;
 
   ModelAnggotaAdmin({
     required this.id,
     required this.nama,
     required this.jabatan,
+    this.disetujui = true,
   });
 }
 
@@ -33,6 +36,31 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
       ModelAnggotaAdmin(id: 'A4', nama: 'Elizabeth Wong', jabatan: 'Bendahara'),
       ModelAnggotaAdmin(id: 'A5', nama: 'Amizola Saputra', jabatan: 'Seksi Humas & Acara'),
     ];
+    _muatUserFirestore();
+  }
+
+  // Muat akun terdaftar dari Firestore
+  void _muatUserFirestore() async {
+    try {
+      final snap = await FirebaseFirestore.instance.collection('users').get();
+      if (snap.docs.isNotEmpty) {
+        final List<ModelAnggotaAdmin> cloudList = [];
+        for (var doc in snap.docs) {
+          final data = doc.data();
+          cloudList.add(ModelAnggotaAdmin(
+            id: doc.id,
+            nama: data['nama'] ?? data['username'] ?? 'Pengguna',
+            jabatan: '${data['role'] ?? 'Anggota'} ${data['disetujui'] == false ? '(Pending ACC)' : ''}',
+            disetujui: data['disetujui'] ?? true,
+          ));
+        }
+        if (mounted) {
+          setState(() {
+            _daftarAnggota.addAll(cloudList);
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   @override
@@ -47,6 +75,31 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
       return item.nama.toLowerCase().contains(query) ||
           item.jabatan.toLowerCase().contains(query);
     }).toList();
+  }
+
+  void _setujuiPersetujuanPengurus(String uid, String nama) async {
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+        'disetujui': true,
+      });
+    } catch (_) {}
+
+    setState(() {
+      final idx = _daftarAnggota.indexWhere((item) => item.id == uid);
+      if (idx != -1) {
+        _daftarAnggota[idx] = ModelAnggotaAdmin(
+          id: uid,
+          nama: nama,
+          jabatan: 'Pengurus (Disetujui)',
+          disetujui: true,
+        );
+      }
+    });
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Akun Pengurus $nama berhasil di-ACC/Disetujui!')),
+    );
   }
 
   void _tambahAtauEditAnggota([ModelAnggotaAdmin? editItem, int? index]) {
@@ -120,7 +173,7 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
       appBar: AppBar(
         leading: const Icon(Icons.menu),
         title: const Text(
-          'Kelola Anggota',
+          'Kelola Anggota & Persetujuan',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         centerTitle: true,
@@ -182,11 +235,14 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
                         child: Row(
                           children: [
                             CircleAvatar(
-                              radius: 26,
-                              backgroundColor: const Color(0xFFE5E7EB),
+                              radius: 24,
+                              backgroundColor: item.disetujui ? const Color(0xFFE5E7EB) : Colors.orange.shade100,
                               child: Text(
                                 item.nama.isNotEmpty ? item.nama[0] : 'A',
-                                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2B303A)),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: item.disetujui ? const Color(0xFF2B303A) : Colors.orange.shade900,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -202,20 +258,38 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
                                   const SizedBox(height: 2),
                                   Text(
                                     item.jabatan,
-                                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: item.disetujui ? Colors.grey.shade600 : Colors.orange.shade800,
+                                      fontWeight: item.disetujui ? FontWeight.normal : FontWeight.bold,
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
 
-                            IconButton(
-                              icon: const Icon(Icons.edit_outlined, size: 20, color: Color(0xFF2B303A)),
-                              onPressed: () => _tambahAtauEditAnggota(item, index),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF2B303A)),
-                              onPressed: () => _hapusAnggota(index),
-                            ),
+                            if (!item.disetujui)
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF1E3A8A),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                onPressed: () => _setujuiPersetujuanPengurus(item.id, item.nama),
+                                child: const Text('Setujui (ACC)', style: TextStyle(fontSize: 11)),
+                              )
+                            else ...[
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined, size: 20, color: Color(0xFF2B303A)),
+                                onPressed: () => _tambahAtauEditAnggota(item, index),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF2B303A)),
+                                onPressed: () => _hapusAnggota(index),
+                              ),
+                            ],
                           ],
                         ),
                       );

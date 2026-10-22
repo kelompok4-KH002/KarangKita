@@ -43,7 +43,7 @@ class LayananAutentikasi {
     ),
   ];
 
-  // Registrasi Akun ke Firebase Auth & Cloud Firestore
+  // Registrasi Akun Baru ke Firebase Auth & Cloud Firestore
   static Future<HasilAutentikasi> daftar({
     required String nama,
     required String username,
@@ -61,6 +61,9 @@ class LayananAutentikasi {
       );
     }
 
+    // Role Pengurus memerlukan ACC dari Admin Utama
+    bool butuhPersetujuanAdmin = (peranString == 'Pengurus');
+
     RolePengguna role = RolePengguna.anggota;
     if (peranString == 'Pengurus') {
       role = RolePengguna.admin;
@@ -68,7 +71,6 @@ class LayananAutentikasi {
       role = RolePengguna.warga;
     }
 
-    // Format email sintetis untuk Firebase Auth jika input berupa username
     final emailSynthetis = u.contains('@') ? u : '$u@karangkita.app';
 
     try {
@@ -78,7 +80,7 @@ class LayananAutentikasi {
         password: p,
       );
 
-      // 2. Simpan Data Profil Pengguna ke Cloud Firestore
+      // 2. Simpan Data Profil Pengguna di Firestore beserta status persetujuan
       if (cred.user != null) {
         await FirebaseFirestore.instance.collection('users').doc(cred.user!.uid).set({
           'uid': cred.user!.uid,
@@ -86,11 +88,12 @@ class LayananAutentikasi {
           'username': u,
           'whatsapp': whatsapp,
           'role': peranString,
+          'disetujui': !butuhPersetujuanAdmin, // Pengurus = false (pending ACC)
           'createdAt': FieldValue.serverTimestamp(),
         });
       }
     } catch (e) {
-      // Fallback ke penyimpanan memori lokal jika Firebase offline
+      // Fallback lokal
       _daftarPenggunaLokal.add(ModelPengguna(
         nama: nama,
         username: u,
@@ -100,14 +103,19 @@ class LayananAutentikasi {
       ));
     }
 
+    String pesanSukses = 'Registrasi akun berhasil!';
+    if (butuhPersetujuanAdmin) {
+      pesanSukses = 'Registrasi berhasil! Akun Pengurus Anda sedang menunggu persetujuan (ACC) dari Admin Utama.';
+    }
+
     return HasilAutentikasi(
       sukses: true,
-      pesan: 'Registrasi akun berhasil!',
+      pesan: pesanSukses,
       role: role,
     );
   }
 
-  // Login Akun via Firebase Auth & Firestore
+  // Login Akun via Firebase Auth & Pengecekan Akses Firestore
   static Future<HasilAutentikasi> login({
     required String username,
     required String password,
@@ -125,27 +133,38 @@ class LayananAutentikasi {
     final emailSynthetis = u.contains('@') ? u : '$u@karangkita.app';
 
     try {
-      // 1. Coba Login via Firebase Auth Cloud
+      // 1. Coba Login via Firebase Auth
       final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: emailSynthetis,
         password: p,
       );
 
       if (cred.user != null) {
-        // Ambil data role dari Firestore
+        // Ambil data profil & status persetujuan dari Firestore
         final doc = await FirebaseFirestore.instance.collection('users').doc(cred.user!.uid).get();
-        RolePengguna role = RolePengguna.admin;
+
         if (doc.exists) {
+          final isDisetujui = doc.data()?['disetujui'] ?? true;
           final roleStr = doc.data()?['role'] ?? 'Pengurus';
+
+          // Jika akun Pengurus belum di-ACC oleh Admin Utama
+          if (!isDisetujui && roleStr == 'Pengurus') {
+            return HasilAutentikasi(
+              sukses: false,
+              pesan: 'Akun Pengurus Anda belum disetujui (ACC) oleh Admin Utama. Silakan hubungi Ketua Karang Taruna.',
+            );
+          }
+
+          RolePengguna role = RolePengguna.admin;
           if (roleStr == 'Warga') role = RolePengguna.warga;
           if (roleStr == 'Anggota') role = RolePengguna.anggota;
-        }
 
-        return HasilAutentikasi(
-          sukses: true,
-          pesan: 'Login berhasil via Firebase Cloud!',
-          role: role,
-        );
+          return HasilAutentikasi(
+            sukses: true,
+            pesan: 'Login berhasil!',
+            role: role,
+          );
+        }
       }
     } catch (e) {
       // Fallback pengecekan lokal & admin default
