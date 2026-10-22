@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "177010332378",
+    "project_id": "karangkita-d69d1",
+    "storage_bucket": "karangkita-d69d1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:177010332378:android:61ad56b52333831dc14be3",
+        "android_client_info": {
+          "package_name": "com.example.karang_kita"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCuATLwDx6nzC0vbhndsv6UGlx26-Uaca4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

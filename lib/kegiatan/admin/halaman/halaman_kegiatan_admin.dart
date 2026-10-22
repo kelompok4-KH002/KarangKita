@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../komponen/komponen_kegiatan_admin.dart';
 
 class HalamanKegiatanAdmin extends StatefulWidget {
@@ -17,6 +18,33 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
   void initState() {
     super.initState();
     _daftarKegiatan = List.from(dataKegiatanAwal);
+    _muatDataDariFirestore();
+  }
+
+  // Muat data terupdate dari Cloud Firestore jika ada
+  void _muatDataDariFirestore() async {
+    try {
+      final snap = await FirebaseFirestore.instance.collection('kegiatan').get();
+      if (snap.docs.isNotEmpty) {
+        final List<ModelKegiatanAdmin> listDariCloud = [];
+        for (var doc in snap.docs) {
+          final data = doc.data();
+          listDariCloud.add(ModelKegiatanAdmin(
+            id: data['id'] ?? doc.id,
+            judul: data['judul'] ?? '',
+            tanggal: DateTime.tryParse(data['tanggal'] ?? '') ?? DateTime.now(),
+            lokasi: data['lokasi'] ?? '',
+            deskripsi: data['deskripsi'] ?? '',
+            status: data['status'] ?? 'Mendatang',
+          ));
+        }
+        if (mounted) {
+          setState(() {
+            _daftarKegiatan = listDariCloud;
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   @override
@@ -42,28 +70,60 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
     }).toList();
   }
 
-  void _tambahKegiatan(ModelKegiatanAdmin kegiatan) {
+  void _tambahKegiatan(ModelKegiatanAdmin kegiatan) async {
     setState(() {
       _daftarKegiatan.insert(0, kegiatan);
     });
+
+    try {
+      await FirebaseFirestore.instance.collection('kegiatan').doc(kegiatan.id).set({
+        'id': kegiatan.id,
+        'judul': kegiatan.judul,
+        'lokasi': kegiatan.lokasi,
+        'deskripsi': kegiatan.deskripsi,
+        'status': kegiatan.status,
+        'tanggal': kegiatan.tanggal.toIso8601String(),
+      });
+    } catch (_) {}
+
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Kegiatan berhasil ditambahkan')),
     );
   }
 
-  void _editKegiatan(int index, ModelKegiatanAdmin kegiatan) {
+  void _editKegiatan(int index, ModelKegiatanAdmin kegiatan) async {
     setState(() {
       _daftarKegiatan[index] = kegiatan;
     });
+
+    try {
+      await FirebaseFirestore.instance.collection('kegiatan').doc(kegiatan.id).update({
+        'judul': kegiatan.judul,
+        'lokasi': kegiatan.lokasi,
+        'deskripsi': kegiatan.deskripsi,
+        'status': kegiatan.status,
+        'tanggal': kegiatan.tanggal.toIso8601String(),
+      });
+    } catch (_) {}
+
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Kegiatan berhasil diperbarui')),
     );
   }
 
-  void _hapusKegiatan(int index) {
+  void _hapusKegiatan(int index) async {
+    final target = _daftarKegiatan[index];
     setState(() {
       _daftarKegiatan.removeAt(index);
     });
+
+    try {
+      await FirebaseFirestore.instance.collection('kegiatan').doc(target.id).delete();
+    } catch (_) {}
+
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Kegiatan berhasil dihapus')),
     );

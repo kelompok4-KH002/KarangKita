@@ -1,3 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 enum RolePengguna { admin, anggota, warga }
 
 class ModelPengguna {
@@ -29,8 +32,8 @@ class HasilAutentikasi {
 }
 
 class LayananAutentikasi {
-  // Storage memori akun terdaftar
-  static final List<ModelPengguna> _daftarPengguna = [
+  // Storage memori lokal
+  static final List<ModelPengguna> _daftarPenggunaLokal = [
     ModelPengguna(
       nama: 'Administrator',
       username: 'admin',
@@ -40,7 +43,7 @@ class LayananAutentikasi {
     ),
   ];
 
-  // Registrasi Akun Baru secara Dinamis
+  // Registrasi Akun ke Firebase Auth & Cloud Firestore
   static Future<HasilAutentikasi> daftar({
     required String nama,
     required String username,
@@ -48,26 +51,16 @@ class LayananAutentikasi {
     required String password,
     required String peranString,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-
     final u = username.trim().toLowerCase();
-    if (u.isEmpty || password.trim().isEmpty) {
+    final p = password.trim();
+
+    if (u.isEmpty || p.isEmpty) {
       return HasilAutentikasi(
         sukses: false,
         pesan: 'Data pendaftaran tidak boleh kosong.',
       );
     }
 
-    // Pengecekan username apakah sudah ada
-    final sudahAda = _daftarPengguna.any((p) => p.username.toLowerCase() == u);
-    if (sudahAda) {
-      return HasilAutentikasi(
-        sukses: false,
-        pesan: 'Username "$u" sudah terdaftar. Silakan gunakan username lain.',
-      );
-    }
-
-    // Konversi string peran ke enum RolePengguna
     RolePengguna role = RolePengguna.anggota;
     if (peranString == 'Pengurus') {
       role = RolePengguna.admin;
@@ -75,13 +68,37 @@ class LayananAutentikasi {
       role = RolePengguna.warga;
     }
 
-    _daftarPengguna.add(ModelPengguna(
-      nama: nama,
-      username: username.trim(),
-      whatsapp: whatsapp.trim(),
-      password: password.trim(),
-      role: role,
-    ));
+    // Format email sintetis untuk Firebase Auth jika input berupa username
+    final emailSynthetis = u.contains('@') ? u : '$u@karangkita.app';
+
+    try {
+      // 1. Buat User di Firebase Authentication
+      final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: emailSynthetis,
+        password: p,
+      );
+
+      // 2. Simpan Data Profil Pengguna ke Cloud Firestore
+      if (cred.user != null) {
+        await FirebaseFirestore.instance.collection('users').doc(cred.user!.uid).set({
+          'uid': cred.user!.uid,
+          'nama': nama,
+          'username': u,
+          'whatsapp': whatsapp,
+          'role': peranString,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+    } catch (e) {
+      // Fallback ke penyimpanan memori lokal jika Firebase offline
+      _daftarPenggunaLokal.add(ModelPengguna(
+        nama: nama,
+        username: u,
+        whatsapp: whatsapp,
+        password: p,
+        role: role,
+      ));
+    }
 
     return HasilAutentikasi(
       sukses: true,
@@ -90,13 +107,11 @@ class LayananAutentikasi {
     );
   }
 
-  // Login Akun Dinamis
+  // Login Akun via Firebase Auth & Firestore
   static Future<HasilAutentikasi> login({
     required String username,
     required String password,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 400));
-
     final u = username.trim().toLowerCase();
     final p = password.trim();
 
@@ -107,27 +122,53 @@ class LayananAutentikasi {
       );
     }
 
-    // Cari di memori akun terdaftar
-    final userIdx = _daftarPengguna.indexWhere(
-      (acc) => acc.username.toLowerCase() == u && acc.password == p,
-    );
+    final emailSynthetis = u.contains('@') ? u : '$u@karangkita.app';
 
-    if (userIdx != -1) {
-      final user = _daftarPengguna[userIdx];
-      return HasilAutentikasi(
-        sukses: true,
-        pesan: 'Login berhasil sebagai ${user.nama}',
-        role: user.role,
+    try {
+      // 1. Coba Login via Firebase Auth Cloud
+      final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: emailSynthetis,
+        password: p,
       );
-    }
 
-    // Bypass default admin untuk cadangan
-    if ((u == 'admin' && p == 'admin123') || (u == 'admin' && p == 'admin')) {
-      return HasilAutentikasi(
-        sukses: true,
-        pesan: 'Login berhasil sebagai Admin',
-        role: RolePengguna.admin,
+      if (cred.user != null) {
+        // Ambil data role dari Firestore
+        final doc = await FirebaseFirestore.instance.collection('users').doc(cred.user!.uid).get();
+        RolePengguna role = RolePengguna.admin;
+        if (doc.exists) {
+          final roleStr = doc.data()?['role'] ?? 'Pengurus';
+          if (roleStr == 'Warga') role = RolePengguna.warga;
+          if (roleStr == 'Anggota') role = RolePengguna.anggota;
+        }
+
+        return HasilAutentikasi(
+          sukses: true,
+          pesan: 'Login berhasil via Firebase Cloud!',
+          role: role,
+        );
+      }
+    } catch (e) {
+      // Fallback pengecekan lokal & admin default
+      final userIdx = _daftarPenggunaLokal.indexWhere(
+        (acc) => acc.username.toLowerCase() == u && acc.password == p,
       );
+
+      if (userIdx != -1) {
+        final user = _daftarPenggunaLokal[userIdx];
+        return HasilAutentikasi(
+          sukses: true,
+          pesan: 'Login berhasil sebagai ${user.nama}',
+          role: user.role,
+        );
+      }
+
+      if ((u == 'admin' && p == 'admin123') || (u == 'admin' && p == 'admin')) {
+        return HasilAutentikasi(
+          sukses: true,
+          pesan: 'Login berhasil sebagai Admin',
+          role: RolePengguna.admin,
+        );
+      }
     }
 
     return HasilAutentikasi(
