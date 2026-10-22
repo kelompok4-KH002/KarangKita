@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
-const primaryDarkBlue = Color(0xFF1E3A8A); // Tema biru tua seragam Figma
+// Warna biru tua utama sesuai tema Figma
+const primaryDarkBlue = Color(0xFF1E3A8A);
 
-// Component header logo KarangKita
+// Widget header logo dan judul KarangKita
 class HeaderLogoKarangKita extends StatelessWidget {
   const HeaderLogoKarangKita({super.key});
 
@@ -46,7 +47,7 @@ class HeaderLogoKarangKita extends StatelessWidget {
   }
 }
 
-// Input Field Kustom untuk Form Login
+// Widget kustom textfield input
 class InputFieldCustom extends StatelessWidget {
   final TextEditingController controller;
   final String label;
@@ -108,7 +109,7 @@ class InputFieldCustom extends StatelessWidget {
   }
 }
 
-// Tombol Utama Kustom
+// Widget kustom tombol biru utama
 class TombolUtama extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;

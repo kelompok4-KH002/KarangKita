@@ -21,7 +21,6 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
     _muatDataDariFirestore();
   }
 
-  // Muat data terupdate dari Cloud Firestore jika ada
   void _muatDataDariFirestore() async {
     try {
       final snap = await FirebaseFirestore.instance.collection('kegiatan').get();
@@ -131,6 +130,7 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
 
   @override
   Widget build(BuildContext context) {
+    const primaryDarkBlue = Color(0xFF1E3A8A);
     final list = _getFilteredKegiatan();
 
     return Scaffold(
@@ -149,7 +149,7 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
         ],
         elevation: 0,
         backgroundColor: Colors.transparent,
-        foregroundColor: const Color(0xFF2B303A),
+        foregroundColor: primaryDarkBlue,
       ),
       body: Column(
         children: [
@@ -172,7 +172,7 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30),
-                  borderSide: const BorderSide(color: Color(0xFF2B303A)),
+                  borderSide: const BorderSide(color: primaryDarkBlue),
                 ),
               ),
             ),
@@ -190,13 +190,13 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
                   child: ChoiceChip(
                     label: Text(kat),
                     selected: isSelected,
-                    selectedColor: const Color(0xFF2B303A),
+                    selectedColor: primaryDarkBlue,
                     backgroundColor: Colors.white,
                     side: BorderSide(
-                      color: isSelected ? const Color(0xFF2B303A) : Colors.grey.shade300,
+                      color: isSelected ? primaryDarkBlue : Colors.grey.shade300,
                     ),
                     labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : const Color(0xFF2B303A),
+                      color: isSelected ? Colors.white : primaryDarkBlue,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
                     onSelected: (_) {
@@ -239,13 +239,13 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
                               width: 60,
                               height: 60,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFE5E7EB),
+                                color: const Color(0xFFEEF2FF),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Center(
+                              child: const Center(
                                 child: Icon(
                                   Icons.event_note_rounded,
-                                  color: Colors.grey.shade500,
+                                  color: primaryDarkBlue,
                                   size: 28,
                                 ),
                               ),
@@ -262,7 +262,7 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
-                                      color: Color(0xFF2B303A),
+                                      color: primaryDarkBlue,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -281,9 +281,8 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
                               ),
                             ),
 
-                            // Edit Icon
                             IconButton(
-                              icon: const Icon(Icons.edit_outlined, size: 20, color: Color(0xFF2B303A)),
+                              icon: const Icon(Icons.edit_outlined, size: 20, color: primaryDarkBlue),
                               onPressed: () {
                                 showDialog(
                                   context: context,
@@ -294,9 +293,8 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
                                 );
                               },
                             ),
-                            // Delete Icon X
                             IconButton(
-                              icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF2B303A)),
+                              icon: const Icon(Icons.close_rounded, size: 20, color: primaryDarkBlue),
                               onPressed: () => _hapusKegiatan(index),
                             ),
                           ],
@@ -316,7 +314,7 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
             ),
           );
         },
-        backgroundColor: const Color(0xFF2B303A),
+        backgroundColor: primaryDarkBlue,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),

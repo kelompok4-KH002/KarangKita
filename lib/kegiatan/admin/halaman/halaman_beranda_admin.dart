@@ -28,6 +28,8 @@ class _HalamanBerandaAdminState extends State<HalamanBerandaAdmin> {
 
   @override
   Widget build(BuildContext context) {
+    const primaryDarkBlue = Color(0xFF1E3A8A);
+
     return Scaffold(
       body: _pages[_currentIndex],
       // Bottom Navigation Bar 5 Tab
@@ -39,7 +41,7 @@ class _HalamanBerandaAdminState extends State<HalamanBerandaAdmin> {
           });
         },
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF2B303A),
+        selectedItemColor: primaryDarkBlue,
         unselectedItemColor: Colors.grey.shade500,
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
         unselectedLabelStyle: const TextStyle(fontSize: 11),
@@ -76,6 +78,7 @@ class _BerandaTabContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const primaryDarkBlue = Color(0xFF1E3A8A);
     final now = DateTime.now();
     const List<String> namaBulan = [
       '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -106,7 +109,7 @@ class _BerandaTabContent extends StatelessWidget {
         ],
         elevation: 0,
         backgroundColor: Colors.transparent,
-        foregroundColor: const Color(0xFF2B303A),
+        foregroundColor: primaryDarkBlue,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -119,7 +122,7 @@ class _BerandaTabContent extends StatelessWidget {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF2B303A),
+                color: primaryDarkBlue,
               ),
             ),
             const SizedBox(height: 2),
@@ -174,7 +177,7 @@ class _BerandaTabContent extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF2B303A),
+                      color: primaryDarkBlue,
                     ),
                   ),
                 ),
@@ -214,6 +217,7 @@ class _BerandaTabContent extends StatelessWidget {
   }
 
   static Widget _buildStatCard(String count, String label) {
+    const primaryDarkBlue = Color(0xFF1E3A8A);
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -229,7 +233,7 @@ class _BerandaTabContent extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF2B303A),
+                color: primaryDarkBlue,
               ),
             ),
             const SizedBox(height: 4),
@@ -247,6 +251,7 @@ class _BerandaTabContent extends StatelessWidget {
   }
 
   static Widget _buildQuickIcon(IconData icon, String label, VoidCallback onTap) {
+    const primaryDarkBlue = Color(0xFF1E3A8A);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -256,17 +261,17 @@ class _BerandaTabContent extends StatelessWidget {
             width: 58,
             height: 58,
             decoration: BoxDecoration(
-              color: const Color(0xFFE5E7EB),
+              color: const Color(0xFFEEF2FF),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(icon, color: const Color(0xFF2B303A), size: 28),
+            child: Icon(icon, color: primaryDarkBlue, size: 28),
           ),
           const SizedBox(height: 6),
           Text(
             label,
             style: const TextStyle(
               fontSize: 12,
-              color: Color(0xFF2B303A),
+              color: primaryDarkBlue,
             ),
           ),
         ],
@@ -275,6 +280,7 @@ class _BerandaTabContent extends StatelessWidget {
   }
 
   static Widget _buildKegiatanItemCard(String judul, String info) {
+    const primaryDarkBlue = Color(0xFF1E3A8A);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -289,12 +295,12 @@ class _BerandaTabContent extends StatelessWidget {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: const Color(0xFFE5E7EB),
+              color: const Color(0xFFEEF2FF),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
+            child: const Icon(
               Icons.image_outlined,
-              color: Colors.grey.shade500,
+              color: primaryDarkBlue,
               size: 28,
             ),
           ),
@@ -308,7 +314,7 @@ class _BerandaTabContent extends StatelessWidget {
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
-                    color: Color(0xFF2B303A),
+                    color: primaryDarkBlue,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
