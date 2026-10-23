@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/date_badge.dart';
 import '../komponen/komponen_kegiatan_admin.dart';
 
 // Halaman Kelola Kegiatan Admin High-Fidelity Sesuai Mockup Figma (`admin_pengurus_kelola_kegiatan.png`)
@@ -21,6 +22,7 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
     _muatDataDariFirestore();
   }
 
+  // Ambil data kegiatan dari Cloud Firestore jika ada
   void _muatDataDariFirestore() async {
     try {
       final snap = await FirebaseFirestore.instance.collection('kegiatan').get();
@@ -63,7 +65,7 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
         'deskripsi': kegiatan.deskripsi,
         'status': kegiatan.status,
         'tanggal': kegiatan.tanggal.toIso8601String(),
-      });
+      }, SetOptions(merge: true));
     } catch (_) {}
 
     if (!mounted) return;
@@ -78,7 +80,8 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
     });
 
     try {
-      await FirebaseFirestore.instance.collection('kegiatan').doc(kegiatan.id).update({
+      await FirebaseFirestore.instance.collection('kegiatan').doc(kegiatan.id).set({
+        'id': kegiatan.id,
         'judul': kegiatan.judul,
         'waktu': kegiatan.waktu,
         'lokasi': kegiatan.lokasi,
@@ -86,7 +89,7 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
         'deskripsi': kegiatan.deskripsi,
         'status': kegiatan.status,
         'tanggal': kegiatan.tanggal.toIso8601String(),
-      });
+      }, SetOptions(merge: true));
     } catch (_) {}
 
     if (!mounted) return;

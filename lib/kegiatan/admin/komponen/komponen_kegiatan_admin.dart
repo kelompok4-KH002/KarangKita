@@ -123,6 +123,19 @@ class _DialogTambahEditKegiatanState extends State<DialogTambahEditKegiatan> {
     super.dispose();
   }
 
+  DateTime _parseTanggalText(String text, DateTime defaultVal) {
+    try {
+      final parts = text.split('/');
+      if (parts.length == 3) {
+        final m = int.parse(parts[0]);
+        final d = int.parse(parts[1]);
+        final y = int.parse(parts[2]);
+        return DateTime(y, m, d);
+      }
+    } catch (_) {}
+    return defaultVal;
+  }
+
   // Buka kalender interaktif untuk memilih tanggal tanpa perlu ketik manual
   void _pilihTanggal() async {
     final tgl = await showDatePicker(
@@ -388,10 +401,11 @@ class _DialogTambahEditKegiatanState extends State<DialogTambahEditKegiatan> {
                     ),
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
+                        final tglSimpan = _parseTanggalText(_tanggalController.text, _tanggalObj);
                         final hasil = ModelKegiatanAdmin(
                           id: widget.kegiatanEdit?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
                           judul: _judulController.text.trim(),
-                          tanggal: _tanggalObj,
+                          tanggal: tglSimpan,
                           waktu: _waktuController.text.trim(),
                           lokasi: _lokasiController.text.trim(),
                           kategori: _kategoriTerpilih,
