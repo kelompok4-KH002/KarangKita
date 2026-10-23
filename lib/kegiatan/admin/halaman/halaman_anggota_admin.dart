@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../core/theme/app_colors.dart';
 
 class ModelAnggotaAdmin {
   final String id;
@@ -15,6 +16,7 @@ class ModelAnggotaAdmin {
   });
 }
 
+// Halaman Kelola Anggota Admin Sesuai Mockup Figma (`admin_pengurus_kelola_anggota.png`)
 class HalamanAnggotaAdmin extends StatefulWidget {
   const HalamanAnggotaAdmin({super.key});
 
@@ -39,7 +41,6 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
     _muatUserFirestore();
   }
 
-  // Muat akun terdaftar dari Firestore
   void _muatUserFirestore() async {
     try {
       final snap = await FirebaseFirestore.instance.collection('users').get();
@@ -128,7 +129,7 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2B303A), foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
             onPressed: () {
               if (namaCtrl.text.trim().isNotEmpty) {
                 setState(() {
@@ -170,23 +171,6 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
     final list = _getFiltered();
 
     return Scaffold(
-      appBar: AppBar(
-        leading: const Icon(Icons.menu),
-        title: const Text(
-          'Kelola Anggota & Persetujuan',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        centerTitle: true,
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 16.0),
-            child: Icon(Icons.search),
-          ),
-        ],
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: const Color(0xFF2B303A),
-      ),
       body: Column(
         children: [
           // Search Bar
@@ -196,20 +180,22 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
               controller: _searchController,
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
-                hintText: 'Cari',
-                hintStyle: TextStyle(color: Colors.grey.shade500),
+                hintText: 'Cari anggota...',
+                hintStyle: const TextStyle(color: AppColors.textMuted),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                filled: true,
+                fillColor: AppColors.surface,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderSide: const BorderSide(color: AppColors.cardBorder),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderSide: const BorderSide(color: AppColors.cardBorder),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30),
-                  borderSide: const BorderSide(color: Color(0xFF2B303A)),
+                  borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
                 ),
               ),
             ),
@@ -228,20 +214,20 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AppColors.surface,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.grey.shade300),
+                          border: Border.all(color: AppColors.cardBorder),
                         ),
                         child: Row(
                           children: [
                             CircleAvatar(
                               radius: 24,
-                              backgroundColor: item.disetujui ? const Color(0xFFE5E7EB) : Colors.orange.shade100,
+                              backgroundColor: item.disetujui ? AppColors.primaryLight : Colors.orange.shade100,
                               child: Text(
                                 item.nama.isNotEmpty ? item.nama[0] : 'A',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: item.disetujui ? const Color(0xFF2B303A) : Colors.orange.shade900,
+                                  color: item.disetujui ? AppColors.primary : Colors.orange.shade900,
                                 ),
                               ),
                             ),
@@ -260,7 +246,7 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
                                     item.jabatan,
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: item.disetujui ? Colors.grey.shade600 : Colors.orange.shade800,
+                                      color: item.disetujui ? AppColors.textSecondary : Colors.orange.shade800,
                                       fontWeight: item.disetujui ? FontWeight.normal : FontWeight.bold,
                                     ),
                                   ),
@@ -271,7 +257,7 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
                             if (!item.disetujui)
                               ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF1E3A8A),
+                                  backgroundColor: AppColors.primary,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   minimumSize: Size.zero,
@@ -282,11 +268,11 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
                               )
                             else ...[
                               IconButton(
-                                icon: const Icon(Icons.edit_outlined, size: 20, color: Color(0xFF2B303A)),
+                                icon: const Icon(Icons.edit_outlined, size: 20, color: AppColors.primary),
                                 onPressed: () => _tambahAtauEditAnggota(item, index),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF2B303A)),
+                                icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.primary),
                                 onPressed: () => _hapusAnggota(index),
                               ),
                             ],
@@ -300,7 +286,7 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _tambahAtauEditAnggota(),
-        backgroundColor: const Color(0xFF2B303A),
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),

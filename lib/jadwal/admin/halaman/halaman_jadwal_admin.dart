@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/date_badge.dart';
 import '../komponen/komponen_jadwal_admin.dart';
 
+// Halaman Kelola Jadwal Admin Sesuai Mockup Figma (`admin_pengurus_kelola_jadwal.png`)
 class HalamanJadwalAdmin extends StatefulWidget {
   const HalamanJadwalAdmin({super.key});
 
@@ -57,28 +61,6 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
     final int hariMulaiIndex = (DateTime(_tanggalTerpilih.year, _tanggalTerpilih.month, 1).weekday - 1) % 7;
 
     return Scaffold(
-      appBar: AppBar(
-        leading: const Icon(Icons.menu),
-        title: const Text(
-          'Kelola Jadwal',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => DialogTambahEditJadwalAdmin(onSimpan: _tambahJadwal),
-              );
-            },
-          ),
-        ],
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: const Color(0xFF2B303A),
-      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -89,7 +71,7 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.chevron_left),
+                  icon: const Icon(Icons.chevron_left, color: AppColors.textPrimary),
                   onPressed: () {
                     setState(() {
                       _tanggalTerpilih = DateTime(_tanggalTerpilih.year, _tanggalTerpilih.month - 1, 1);
@@ -98,14 +80,10 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
                 ),
                 Text(
                   '${namaBulan[_tanggalTerpilih.month]} ${_tanggalTerpilih.year}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2B303A),
-                  ),
+                  style: AppTextStyles.cardTitle,
                 ),
                 IconButton(
-                  icon: const Icon(Icons.chevron_right),
+                  icon: const Icon(Icons.chevron_right, color: AppColors.textPrimary),
                   onPressed: () {
                     setState(() {
                       _tanggalTerpilih = DateTime(_tanggalTerpilih.year, _tanggalTerpilih.month + 1, 1);
@@ -167,7 +145,7 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: isTerpilih ? const Color(0xFF2B303A) : Colors.transparent,
+                      color: isTerpilih ? AppColors.primary : Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
@@ -178,7 +156,7 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: isTerpilih ? FontWeight.bold : FontWeight.normal,
-                            color: isTerpilih ? Colors.white : const Color(0xFF2B303A),
+                            color: isTerpilih ? Colors.white : AppColors.textPrimary,
                           ),
                         ),
                         if (nomorHari % 7 == 3 || nomorHari == 10 || nomorHari == 17 || nomorHari == 24 || nomorHari == 31)
@@ -187,7 +165,7 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
                             width: 4,
                             height: 4,
                             decoration: BoxDecoration(
-                              color: isTerpilih ? Colors.white : const Color(0xFF2B303A),
+                              color: isTerpilih ? Colors.white : AppColors.primary,
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -205,7 +183,7 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
               children: [
                 Text(
                   'Tanggal terpilih (${_tanggalTerpilih.day}/${_tanggalTerpilih.month}/${_tanggalTerpilih.year})',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  style: AppTextStyles.cardTitle,
                 ),
                 Text(
                   'Agenda',
@@ -215,7 +193,7 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
             ),
             const SizedBox(height: 12),
 
-            // Kartu Agenda
+            // Kartu Agenda dengan Date Badge
             _daftarJadwal.isEmpty
                 ? Center(
                     child: Padding(
@@ -233,21 +211,13 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AppColors.surface,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.grey.shade300),
+                          border: Border.all(color: AppColors.cardBorder),
                         ),
                         child: Row(
                           children: [
-                            Container(
-                              width: 50,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE5E7EB),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(Icons.event, color: Color(0xFF2B303A)),
-                            ),
+                            DateBadge(tanggal: item.tanggal),
                             const SizedBox(width: 12),
 
                             Expanded(
@@ -256,21 +226,21 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
                                 children: [
                                   Text(
                                     item.judul,
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                    style: AppTextStyles.cardTitle,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     '${item.jam} · ${item.lokasi}',
-                                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                    style: AppTextStyles.cardSubtitle,
                                   ),
                                 ],
                               ),
                             ),
 
                             IconButton(
-                              icon: const Icon(Icons.edit_outlined, size: 20, color: Color(0xFF2B303A)),
+                              icon: const Icon(Icons.edit_outlined, size: 20, color: AppColors.primary),
                               onPressed: () {
                                 showDialog(
                                   context: context,
@@ -282,7 +252,7 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
                               },
                             ),
                             IconButton(
-                              icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF2B303A)),
+                              icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.primary),
                               onPressed: () => _hapusJadwal(index),
                             ),
                           ],
@@ -298,7 +268,7 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
               height: 48,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2B303A),
+                  backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../core/theme/app_colors.dart';
 
-// Model foto galeri (support foto lokal HP atau URL)
 class ModelFotoGaleri {
   final String id;
   final String? imagePath;
@@ -17,6 +17,7 @@ class ModelFotoGaleri {
   });
 }
 
+// Halaman Kelola Dokumentasi Galeri Admin Sesuai Mockup Figma (`admin_pengurus_kelola_dokumentasi.png`)
 class HalamanGaleriAdmin extends StatefulWidget {
   const HalamanGaleriAdmin({super.key});
 
@@ -28,17 +29,14 @@ class _HalamanGaleriAdminState extends State<HalamanGaleriAdmin> {
   String _filterAlbum = 'Semua';
   final ImagePicker _picker = ImagePicker();
 
-  // List penyimpan foto
   late List<ModelFotoGaleri> _daftarFoto;
 
   @override
   void initState() {
     super.initState();
-    // Dimulai dari list kosong agar foto murni dari galeri HP
     _daftarFoto = [];
   }
 
-  // Filter foto berdasarkan album
   List<ModelFotoGaleri> _getFilteredFoto() {
     if (_filterAlbum == 'Semua') {
       return _daftarFoto;
@@ -46,7 +44,6 @@ class _HalamanGaleriAdminState extends State<HalamanGaleriAdmin> {
     return _daftarFoto.where((foto) => foto.album == _filterAlbum).toList();
   }
 
-  // Fungsi buka galeri HP dan tambah foto
   Future<void> _pilihFotoDariGaleri() async {
     try {
       final XFile? file = await _picker.pickImage(
@@ -85,7 +82,6 @@ class _HalamanGaleriAdminState extends State<HalamanGaleriAdmin> {
     }
   }
 
-  // Hapus foto dari list
   void _hapusFoto(int index) {
     setState(() {
       _daftarFoto.removeAt(index);
@@ -100,23 +96,6 @@ class _HalamanGaleriAdminState extends State<HalamanGaleriAdmin> {
     final listFoto = _getFilteredFoto();
 
     return Scaffold(
-      appBar: AppBar(
-        leading: const Icon(Icons.menu),
-        title: const Text(
-          'Kelola Dokumentasi',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        centerTitle: true,
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 16.0),
-            child: Icon(Icons.more_vert),
-          ),
-        ],
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: const Color(0xFF2B303A),
-      ),
       body: Column(
         children: [
           // Filter Chips Album
@@ -131,13 +110,13 @@ class _HalamanGaleriAdminState extends State<HalamanGaleriAdmin> {
                   child: ChoiceChip(
                     label: Text(album),
                     selected: isSelected,
-                    selectedColor: const Color(0xFF2B303A),
-                    backgroundColor: Colors.white,
+                    selectedColor: AppColors.primary,
+                    backgroundColor: AppColors.surface,
                     side: BorderSide(
-                      color: isSelected ? const Color(0xFF2B303A) : Colors.grey.shade300,
+                      color: isSelected ? AppColors.primary : AppColors.cardBorder,
                     ),
                     labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : const Color(0xFF2B303A),
+                      color: isSelected ? Colors.white : AppColors.primary,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
                     onSelected: (_) {
@@ -174,7 +153,6 @@ class _HalamanGaleriAdminState extends State<HalamanGaleriAdmin> {
                       final item = listFoto[index];
 
                       Widget imageWidget;
-                      // Tampilkan foto dari galeri HP jika imagePath tersedia
                       if (item.imagePath != null && item.imagePath!.isNotEmpty) {
                         imageWidget = Image.file(
                           File(item.imagePath!),
@@ -203,7 +181,7 @@ class _HalamanGaleriAdminState extends State<HalamanGaleriAdmin> {
                       return Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade300),
+                          border: Border.all(color: AppColors.cardBorder),
                         ),
                         clipBehavior: Clip.antiAlias,
                         child: Stack(
@@ -231,10 +209,9 @@ class _HalamanGaleriAdminState extends State<HalamanGaleriAdmin> {
           ),
         ],
       ),
-      // Tombol pilih dari galeri
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _pilihFotoDariGaleri,
-        backgroundColor: const Color(0xFF2B303A),
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_a_photo_outlined),
         label: const Text('Pilih dari Galeri', style: TextStyle(fontWeight: FontWeight.bold)),

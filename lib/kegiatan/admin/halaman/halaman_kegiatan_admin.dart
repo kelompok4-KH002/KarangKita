@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/date_badge.dart';
 import '../komponen/komponen_kegiatan_admin.dart';
 
+// Halaman Kelola Kegiatan Admin Sesuai Mockup Figma (`admin_pengurus_kelola_kegiatan.png`)
 class HalamanKegiatanAdmin extends StatefulWidget {
   const HalamanKegiatanAdmin({super.key});
 
@@ -21,6 +24,7 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
     _muatDataDariFirestore();
   }
 
+  // Ambil data kegiatan dari Cloud Firestore jika ada
   void _muatDataDariFirestore() async {
     try {
       final snap = await FirebaseFirestore.instance.collection('kegiatan').get();
@@ -130,49 +134,34 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
 
   @override
   Widget build(BuildContext context) {
-    const primaryDarkBlue = Color(0xFF1E3A8A);
     final list = _getFilteredKegiatan();
 
     return Scaffold(
-      appBar: AppBar(
-        leading: const Icon(Icons.menu),
-        title: const Text(
-          'Kelola Kegiatan',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        centerTitle: true,
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 16.0),
-            child: Icon(Icons.search),
-          ),
-        ],
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: primaryDarkBlue,
-      ),
       body: Column(
         children: [
+          // Search Bar
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: TextField(
               controller: _searchController,
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
-                hintText: 'Cari',
-                hintStyle: TextStyle(color: Colors.grey.shade500),
+                hintText: 'Cari kegiatan...',
+                hintStyle: const TextStyle(color: AppColors.textMuted),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                filled: true,
+                fillColor: AppColors.surface,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderSide: const BorderSide(color: AppColors.cardBorder),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderSide: const BorderSide(color: AppColors.cardBorder),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30),
-                  borderSide: const BorderSide(color: primaryDarkBlue),
+                  borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
                 ),
               ),
             ),
@@ -190,13 +179,13 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
                   child: ChoiceChip(
                     label: Text(kat),
                     selected: isSelected,
-                    selectedColor: primaryDarkBlue,
-                    backgroundColor: Colors.white,
+                    selectedColor: AppColors.primary,
+                    backgroundColor: AppColors.surface,
                     side: BorderSide(
-                      color: isSelected ? primaryDarkBlue : Colors.grey.shade300,
+                      color: isSelected ? AppColors.primary : AppColors.cardBorder,
                     ),
                     labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : primaryDarkBlue,
+                      color: isSelected ? Colors.white : AppColors.primary,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
                     onSelected: (_) {
@@ -210,7 +199,7 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
             ),
           ),
 
-          // Cards list
+          // Cards list dengan Date Badge
           Expanded(
             child: list.isEmpty
                 ? Center(
@@ -228,28 +217,14 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AppColors.surface,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.grey.shade300),
+                          border: Border.all(color: AppColors.cardBorder),
                         ),
                         child: Row(
                           children: [
-                            // Thumbnail Box
-                            Container(
-                              width: 60,
-                              height: 60,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFEEF2FF),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Center(
-                                child: Icon(
-                                  Icons.event_note_rounded,
-                                  color: primaryDarkBlue,
-                                  size: 28,
-                                ),
-                              ),
-                            ),
+                            // Date Badge
+                            DateBadge(tanggal: item.tanggal),
                             const SizedBox(width: 12),
 
                             // Content
@@ -262,27 +237,40 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
-                                      color: primaryDarkBlue,
+                                      color: AppColors.textPrimary,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 4),
-                                  Text(
-                                    '${item.tanggal.day}/${item.tanggal.month}/${item.tanggal.year} · ${item.lokasi}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.location_on_outlined,
+                                        size: 14,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          item.lokasi,
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.textSecondary,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
                             ),
 
+                            // Edit Icon
                             IconButton(
-                              icon: const Icon(Icons.edit_outlined, size: 20, color: primaryDarkBlue),
+                              icon: const Icon(Icons.edit_outlined, size: 20, color: AppColors.primary),
                               onPressed: () {
                                 showDialog(
                                   context: context,
@@ -293,8 +281,9 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
                                 );
                               },
                             ),
+                            // Delete Icon X
                             IconButton(
-                              icon: const Icon(Icons.close_rounded, size: 20, color: primaryDarkBlue),
+                              icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.primary),
                               onPressed: () => _hapusKegiatan(index),
                             ),
                           ],
@@ -314,7 +303,7 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
             ),
           );
         },
-        backgroundColor: primaryDarkBlue,
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),

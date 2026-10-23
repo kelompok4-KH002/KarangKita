@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_header.dart';
@@ -71,8 +72,8 @@ class _HalamanBerandaAdminState extends State<HalamanBerandaAdmin> {
   }
 }
 
-// Widget Tab 1: Beranda Content Sesuai Mockup Figma (`admin_pengurus_beranda_karangkita.png`)
-class _BerandaTabContent extends StatelessWidget {
+// Widget Tab 1: Beranda Content (Angka Stat Dinamis dari Database)
+class _BerandaTabContent extends StatefulWidget {
   final String namaPengguna;
   final String peran;
   final Function(int) onPindahTab;
@@ -82,6 +83,40 @@ class _BerandaTabContent extends StatelessWidget {
     required this.peran,
     required this.onPindahTab,
   });
+
+  @override
+  State<_BerandaTabContent> createState() => _BerandaTabContentState();
+}
+
+class _BerandaTabContentState extends State<_BerandaTabContent> {
+  int _jumlahKegiatan = 3;
+  int _jumlahAnggota = 5;
+  int _jumlahFoto = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _hitungStatistikDinamis();
+  }
+
+  // Hitung jumlah data kegiatan, anggota, dan foto dari Cloud Firestore secara dinamis
+  void _hitungStatistikDinamis() async {
+    try {
+      final snapKegiatan = await FirebaseFirestore.instance.collection('kegiatan').get();
+      final snapAnggota = await FirebaseFirestore.instance.collection('users').get();
+
+      if (mounted) {
+        setState(() {
+          if (snapKegiatan.docs.isNotEmpty) {
+            _jumlahKegiatan = snapKegiatan.docs.length;
+          }
+          if (snapAnggota.docs.isNotEmpty) {
+            _jumlahAnggota = snapAnggota.docs.length;
+          }
+        });
+      }
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -94,30 +129,30 @@ class _BerandaTabContent extends StatelessWidget {
         children: [
           // 1. Hero Card Biru Sapaan Pengguna & Tanggal
           HeroCard(
-            namaPengguna: namaPengguna,
-            peran: peran,
+            namaPengguna: widget.namaPengguna,
+            peran: widget.peran,
             tanggal: now,
           ),
           const SizedBox(height: 16),
 
-          // 2. 3 Stat Cards (Kegiatan, Anggota, Foto)
+          // 2. 3 Stat Cards Dinamis (Kegiatan, Anggota, Foto)
           Row(
-            children: const [
+            children: [
               StatCard(
                 icon: Icons.event_note_outlined,
-                count: '12',
+                count: '$_jumlahKegiatan',
                 label: 'Kegiatan',
               ),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               StatCard(
                 icon: Icons.people_outline,
-                count: '48',
+                count: '$_jumlahAnggota',
                 label: 'Anggota',
               ),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               StatCard(
                 icon: Icons.photo_camera_outlined,
-                count: '96',
+                count: '$_jumlahFoto',
                 label: 'Foto',
               ),
             ],
@@ -133,7 +168,7 @@ class _BerandaTabContent extends StatelessWidget {
                 style: AppTextStyles.sectionTitle,
               ),
               GestureDetector(
-                onTap: () => onPindahTab(1), // Pindah ke Tab Kegiatan
+                onTap: () => widget.onPindahTab(1),
                 child: const Text(
                   'Lihat semua',
                   style: TextStyle(
@@ -152,21 +187,21 @@ class _BerandaTabContent extends StatelessWidget {
             tanggal: DateTime(now.year, 10, 28),
             lokasi: 'Balai Warga RW 05',
             kategori: 'Rapat',
-            onTap: () => onPindahTab(1),
+            onTap: () => widget.onPindahTab(1),
           ),
           EventCard(
             judul: 'Kerja Bakti Lingkungan',
             tanggal: DateTime(now.year, 11, 2),
             lokasi: 'Lapangan Utama',
             kategori: 'Sosial',
-            onTap: () => onPindahTab(1),
+            onTap: () => widget.onPindahTab(1),
           ),
           EventCard(
             judul: 'Turnamen Futsal Pemuda',
             tanggal: DateTime(now.year, 11, 10),
             lokasi: 'GOR Kecamatan',
             kategori: 'Olahraga',
-            onTap: () => onPindahTab(1),
+            onTap: () => widget.onPindahTab(1),
           ),
         ],
       ),
