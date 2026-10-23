@@ -69,7 +69,7 @@ final List<ModelKegiatanAdmin> dataKegiatanAwal = [
   ),
 ];
 
-// Dialog Form Tambah / Edit Kegiatan Presisi Sesuai Mockup Figma (`admin_pengurus_edit_kegiatan.png`)
+// Dialog Form Tambah / Edit Kegiatan dengan Calendar Picker Interaktif
 class DialogTambahEditKegiatan extends StatefulWidget {
   final ModelKegiatanAdmin? kegiatanEdit;
   final Function(ModelKegiatanAdmin) onSimpan;
@@ -95,15 +95,16 @@ class _DialogTambahEditKegiatanState extends State<DialogTambahEditKegiatan> {
   late TextEditingController _deskripsiController;
   late String _statusTerpilih;
   late String _kategoriTerpilih;
+  late DateTime _tanggalObj;
 
   @override
   void initState() {
     super.initState();
     final edit = widget.kegiatanEdit;
-    final tgl = edit?.tanggal ?? DateTime.now();
+    _tanggalObj = edit?.tanggal ?? DateTime.now();
     _judulController = TextEditingController(text: edit?.judul ?? '');
     _tanggalController = TextEditingController(
-      text: '${tgl.month}/${tgl.day}/${tgl.year}',
+      text: '${_tanggalObj.month}/${_tanggalObj.day}/${_tanggalObj.year}',
     );
     _waktuController = TextEditingController(text: edit?.waktu ?? '07:30 WIB');
     _lokasiController = TextEditingController(text: edit?.lokasi ?? 'Area Lingkungan RW 05 (RT 01 - 04)');
@@ -122,6 +123,58 @@ class _DialogTambahEditKegiatanState extends State<DialogTambahEditKegiatan> {
     _lokasiController.dispose();
     _deskripsiController.dispose();
     super.dispose();
+  }
+
+  // Buka kalender interaktif untuk memilih tanggal tanpa perlu ketik manual
+  void _pilihTanggal() async {
+    final tgl = await showDatePicker(
+      context: context,
+      initialDate: _tanggalObj,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (tgl != null) {
+      setState(() {
+        _tanggalObj = tgl;
+        _tanggalController.text = '${tgl.month}/${tgl.day}/${tgl.year}';
+      });
+    }
+  }
+
+  // Buka time picker interaktif untuk memilih jam
+  void _pilihWaktu() async {
+    final wkt = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 7, minute: 30),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (wkt != null) {
+      if (!mounted) return;
+      final jamStr = wkt.hour.toString().padLeft(2, '0');
+      final menitStr = wkt.minute.toString().padLeft(2, '0');
+      setState(() {
+        _waktuController.text = '$jamStr:$menitStr WIB';
+      });
+    }
   }
 
   @override
@@ -182,21 +235,31 @@ class _DialogTambahEditKegiatanState extends State<DialogTambahEditKegiatan> {
                       ),
                       const SizedBox(height: 14),
 
-                      // Tanggal
+                      // Tanggal (Pop-up Calendar Picker Interaktif)
                       _buildInputLabel('Tanggal'),
                       TextFormField(
                         controller: _tanggalController,
-                        decoration: _buildInputDecoration(hintText: 'MM/DD/YYYY'),
-                        validator: (val) => val == null || val.trim().isEmpty ? 'Tanggal wajib diisi' : null,
+                        readOnly: true,
+                        onTap: _pilihTanggal,
+                        decoration: _buildInputDecoration(
+                          hintText: 'Pilih tanggal di kalender',
+                          suffixIcon: const Icon(Icons.calendar_today_outlined, color: AppColors.primary, size: 20),
+                        ),
+                        validator: (val) => val == null || val.trim().isEmpty ? 'Tanggal wajib dipilih' : null,
                       ),
                       const SizedBox(height: 14),
 
-                      // Waktu
+                      // Waktu (Pop-up Time Picker Interaktif)
                       _buildInputLabel('Waktu'),
                       TextFormField(
                         controller: _waktuController,
-                        decoration: _buildInputDecoration(hintText: '07:30 WIB'),
-                        validator: (val) => val == null || val.trim().isEmpty ? 'Waktu wajib diisi' : null,
+                        readOnly: true,
+                        onTap: _pilihWaktu,
+                        decoration: _buildInputDecoration(
+                          hintText: 'Pilih jam kegiatan',
+                          suffixIcon: const Icon(Icons.access_time_outlined, color: AppColors.primary, size: 20),
+                        ),
+                        validator: (val) => val == null || val.trim().isEmpty ? 'Waktu wajib dipilih' : null,
                       ),
                       const SizedBox(height: 14),
 
@@ -330,7 +393,7 @@ class _DialogTambahEditKegiatanState extends State<DialogTambahEditKegiatan> {
                         final hasil = ModelKegiatanAdmin(
                           id: widget.kegiatanEdit?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
                           judul: _judulController.text.trim(),
-                          tanggal: DateTime.now(),
+                          tanggal: _tanggalObj,
                           waktu: _waktuController.text.trim(),
                           lokasi: _lokasiController.text.trim(),
                           kategori: _kategoriTerpilih,
@@ -416,11 +479,16 @@ class _DialogTambahEditKegiatanState extends State<DialogTambahEditKegiatan> {
     );
   }
 
-  static InputDecoration _buildInputDecoration({required String hintText, IconData? prefixIcon}) {
+  static InputDecoration _buildInputDecoration({
+    required String hintText,
+    IconData? prefixIcon,
+    Widget? suffixIcon,
+  }) {
     return InputDecoration(
       hintText: hintText,
       hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
       prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: AppColors.primary, size: 18) : null,
+      suffixIcon: suffixIcon,
       filled: true,
       fillColor: const Color(0xFFF8FAFC),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
