@@ -146,7 +146,7 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
               controller: _searchController,
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
-                hintText: 'Cari kegiatan...',
+                hintText: 'Cari',
                 hintStyle: const TextStyle(color: AppColors.textMuted),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 filled: true,
@@ -199,7 +199,7 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
             ),
           ),
 
-          // Cards list dengan Date Badge
+          // List Cards dengan Date Badge Sesuai Mockup Figma
           Expanded(
             child: list.isEmpty
                 ? Center(
@@ -220,6 +220,13 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
                           color: AppColors.surface,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: AppColors.cardBorder),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.02),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
                         child: Row(
                           children: [
@@ -243,26 +250,14 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.location_on_outlined,
-                                        size: 14,
-                                        color: AppColors.textSecondary,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Expanded(
-                                        child: Text(
-                                          item.lokasi,
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: AppColors.textSecondary,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ],
+                                  Text(
+                                    '${item.tanggal.day}/${item.tanggal.month}/${item.tanggal.year} · ${item.lokasi}',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
