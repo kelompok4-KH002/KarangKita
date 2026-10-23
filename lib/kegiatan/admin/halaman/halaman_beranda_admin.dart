@@ -1,336 +1,172 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/app_header.dart';
+import '../../../core/widgets/app_drawer.dart';
+import '../../../core/widgets/app_bottom_nav.dart';
+import '../../../core/widgets/hero_card.dart';
+import '../../../core/widgets/stat_card.dart';
+import '../../../core/widgets/event_card.dart';
 import 'halaman_kegiatan_admin.dart';
 import '../../../jadwal/admin/halaman/halaman_jadwal_admin.dart';
 import 'halaman_anggota_admin.dart';
 import 'halaman_galeri_admin.dart';
-import '../../../autentikasi/halaman/halaman_login.dart';
 
-// Container utama admin dengan BottomNavigationBar 5 Tab
+// Container Utama Admin dengan BottomNavigationBar & Navigation Drawer
 class HalamanBerandaAdmin extends StatefulWidget {
-  const HalamanBerandaAdmin({super.key});
+  final String namaPengguna;
+  final String peran;
+
+  const HalamanBerandaAdmin({
+    super.key,
+    this.namaPengguna = 'Admin KarangKita',
+    this.peran = 'Ketua Pengurus',
+  });
 
   @override
   State<HalamanBerandaAdmin> createState() => _HalamanBerandaAdminState();
 }
 
 class _HalamanBerandaAdminState extends State<HalamanBerandaAdmin> {
-  // Index tab aktif
   int _currentIndex = 0;
-
-  // Daftar halaman untuk masing-masing tab
-  final List<Widget> _pages = const [
-    _BerandaTabContent(),
-    HalamanKegiatanAdmin(),
-    HalamanJadwalAdmin(),
-    HalamanAnggotaAdmin(),
-    HalamanGaleriAdmin(),
-  ];
 
   @override
   Widget build(BuildContext context) {
-    const primaryDarkBlue = Color(0xFF1E3A8A);
+    final List<Widget> pages = [
+      _BerandaTabContent(
+        namaPengguna: widget.namaPengguna,
+        peran: widget.peran,
+        onPindahTab: (idx) {
+          setState(() {
+            _currentIndex = idx;
+          });
+        },
+      ),
+      const HalamanKegiatanAdmin(),
+      const HalamanJadwalAdmin(),
+      const HalamanAnggotaAdmin(),
+      const HalamanGaleriAdmin(),
+    ];
 
     return Scaffold(
-      body: _pages[_currentIndex],
-      // Bottom Navigation Bar 5 Tab
-      bottomNavigationBar: BottomNavigationBar(
+      appBar: const AppHeader(title: 'KarangKita'),
+      drawer: AppDrawer(
+        activeIndex: _currentIndex,
+        onSelectTab: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+      ),
+      body: pages[_currentIndex],
+      bottomNavigationBar: AppBottomNav(
         currentIndex: _currentIndex,
         onTap: (index) {
           setState(() {
             _currentIndex = index;
           });
         },
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: primaryDarkBlue,
-        unselectedItemColor: Colors.grey.shade500,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
-        unselectedLabelStyle: const TextStyle(fontSize: 11),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_filled),
-            label: 'Beranda',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.event_note_outlined),
-            label: 'Kegiatan',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_month_outlined),
-            label: 'Jadwal',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people_outline),
-            label: 'Anggota',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.photo_library_outlined),
-            label: 'Galeri',
-          ),
-        ],
       ),
     );
   }
 }
 
-// Content untuk Tab 1 (Beranda Admin)
+// Widget Tab 1: Beranda Content Sesuai Mockup Figma (`admin_pengurus_beranda_karangkita.png`)
 class _BerandaTabContent extends StatelessWidget {
-  const _BerandaTabContent();
+  final String namaPengguna;
+  final String peran;
+  final Function(int) onPindahTab;
+
+  const _BerandaTabContent({
+    required this.namaPengguna,
+    required this.peran,
+    required this.onPindahTab,
+  });
 
   @override
   Widget build(BuildContext context) {
-    const primaryDarkBlue = Color(0xFF1E3A8A);
     final now = DateTime.now();
-    const List<String> namaBulan = [
-      '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-    ];
 
-    final parentState = context.findAncestorStateOfType<_HalamanBerandaAdminState>();
-
-    return Scaffold(
-      appBar: AppBar(
-        leading: const Icon(Icons.menu),
-        title: const Text(
-          'KarangKita',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Logout Admin',
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const HalamanLogin()),
-              );
-            },
-          ),
-        ],
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: primaryDarkBlue,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Sapaan pengguna & Tanggal hari ini
-            const Text(
-              'Sapaan pengguna',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: primaryDarkBlue,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'Tanggal hari ini (${now.day} ${namaBulan[now.month]} ${now.year})',
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey.shade600,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // 3 Stat Cards (Kegiatan / Anggota / Foto)
-            Row(
-              children: [
-                _buildStatCard('03', 'Kegiatan'),
-                const SizedBox(width: 10),
-                _buildStatCard('12', 'Anggota'),
-                const SizedBox(width: 10),
-                _buildStatCard('08', 'Foto'),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // 4 Quick Access Icons (Pindah Tab Langsung)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildQuickIcon(Icons.event_note, 'Kegiatan', () {
-                  parentState?.setState(() => parentState._currentIndex = 1);
-                }),
-                _buildQuickIcon(Icons.calendar_month, 'Jadwal', () {
-                  parentState?.setState(() => parentState._currentIndex = 2);
-                }),
-                _buildQuickIcon(Icons.people, 'Anggota', () {
-                  parentState?.setState(() => parentState._currentIndex = 3);
-                }),
-                _buildQuickIcon(Icons.folder_outlined, 'Dokumen', () {
-                  parentState?.setState(() => parentState._currentIndex = 4);
-                }),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Section Kegiatan terdekat
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Expanded(
-                  child: Text(
-                    'Kegiatan terdekat',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: primaryDarkBlue,
-                    ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () {
-                    parentState?.setState(() => parentState._currentIndex = 1);
-                  },
-                  child: Text(
-                    'Lihat semua',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Item Cards Kegiatan Terdekat
-            _buildKegiatanItemCard(
-              'Rapat Bulanan Pengurus',
-              '18 Oktober 2026 · Balai Warga RW 05',
-            ),
-            _buildKegiatanItemCard(
-              'Kerja Bakti Cat Gapura & Bersih Desa',
-              '25 Oktober 2026 · RT 02 & RT 03',
-            ),
-            _buildKegiatanItemCard(
-              'Turnamen Futsal Pemuda',
-              '1 November 2026 · Lapangan Champion',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  static Widget _buildStatCard(String count, String label) {
-    const primaryDarkBlue = Color(0xFF1E3A8A);
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade300),
-        ),
-        child: Column(
-          children: [
-            Text(
-              count,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: primaryDarkBlue,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  static Widget _buildQuickIcon(IconData icon, String label, VoidCallback onTap) {
-    const primaryDarkBlue = Color(0xFF1E3A8A);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 58,
-            height: 58,
-            decoration: BoxDecoration(
-              color: const Color(0xFFEEF2FF),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(icon, color: primaryDarkBlue, size: 28),
+          // 1. Hero Card Biru Sapaan Pengguna & Tanggal
+          HeroCard(
+            namaPengguna: namaPengguna,
+            peran: peran,
+            tanggal: now,
           ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: primaryDarkBlue,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+          const SizedBox(height: 16),
 
-  static Widget _buildKegiatanItemCard(String judul, String info) {
-    const primaryDarkBlue = Color(0xFF1E3A8A);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: const Color(0xFFEEF2FF),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.image_outlined,
-              color: primaryDarkBlue,
-              size: 28,
-            ),
+          // 2. 3 Stat Cards (Kegiatan, Anggota, Foto)
+          Row(
+            children: const [
+              StatCard(
+                icon: Icons.event_note_outlined,
+                count: '12',
+                label: 'Kegiatan',
+              ),
+              SizedBox(width: 10),
+              StatCard(
+                icon: Icons.people_outline,
+                count: '48',
+                label: 'Anggota',
+              ),
+              SizedBox(width: 10),
+              StatCard(
+                icon: Icons.photo_camera_outlined,
+                count: '96',
+                label: 'Foto',
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  judul,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: primaryDarkBlue,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  info,
+          const SizedBox(height: 20),
+
+          // 3. Section "Kegiatan terdekat" with "Lihat semua"
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Kegiatan terdekat',
+                style: AppTextStyles.sectionTitle,
+              ),
+              GestureDetector(
+                onTap: () => onPindahTab(1), // Pindah ke Tab Kegiatan
+                child: const Text(
+                  'Lihat semua',
                   style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ],
-            ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // 4. List Kegiatan Terdekat dengan Date Badge
+          EventCard(
+            judul: 'Rapat Kerja Bulanan',
+            tanggal: DateTime(now.year, 10, 28),
+            lokasi: 'Balai Warga RW 05',
+            kategori: 'Rapat',
+            onTap: () => onPindahTab(1),
+          ),
+          EventCard(
+            judul: 'Kerja Bakti Lingkungan',
+            tanggal: DateTime(now.year, 11, 2),
+            lokasi: 'Lapangan Utama',
+            kategori: 'Sosial',
+            onTap: () => onPindahTab(1),
+          ),
+          EventCard(
+            judul: 'Turnamen Futsal Pemuda',
+            tanggal: DateTime(now.year, 11, 10),
+            lokasi: 'GOR Kecamatan',
+            kategori: 'Olahraga',
+            onTap: () => onPindahTab(1),
           ),
         ],
       ),
