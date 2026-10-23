@@ -104,13 +104,11 @@ class _DialogTambahEditKegiatanState extends State<DialogTambahEditKegiatan> {
     _tanggalObj = edit?.tanggal ?? DateTime.now();
     _judulController = TextEditingController(text: edit?.judul ?? '');
     _tanggalController = TextEditingController(
-      text: '${_tanggalObj.month}/${_tanggalObj.day}/${_tanggalObj.year}',
+      text: edit != null ? '${_tanggalObj.month}/${_tanggalObj.day}/${_tanggalObj.year}' : '',
     );
-    _waktuController = TextEditingController(text: edit?.waktu ?? '07:30 WIB');
-    _lokasiController = TextEditingController(text: edit?.lokasi ?? 'Area Lingkungan RW 05 (RT 01 - 04)');
-    _deskripsiController = TextEditingController(
-      text: edit?.deskripsi ?? 'Kerja bakti pembersihan saluran air, pemangkasan dahan pohon, dan pengelolaan sampah warga menjelang musim hujan.',
-    );
+    _waktuController = TextEditingController(text: edit?.waktu ?? '');
+    _lokasiController = TextEditingController(text: edit?.lokasi ?? '');
+    _deskripsiController = TextEditingController(text: edit?.deskripsi ?? '');
     _statusTerpilih = edit?.status ?? 'Mendatang';
     _kategoriTerpilih = edit?.kategori ?? 'Sosial';
   }
@@ -268,7 +266,7 @@ class _DialogTambahEditKegiatanState extends State<DialogTambahEditKegiatan> {
                       TextFormField(
                         controller: _lokasiController,
                         decoration: _buildInputDecoration(
-                          hintText: 'Lokasi kegiatan',
+                          hintText: 'Area Lingkungan RW 05 (RT 01 - 04)',
                           prefixIcon: Icons.location_on_outlined,
                         ),
                         validator: (val) => val == null || val.trim().isEmpty ? 'Lokasi wajib diisi' : null,
