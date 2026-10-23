@@ -8,6 +8,7 @@ import '../../../core/widgets/app_bottom_nav.dart';
 import '../../../core/widgets/hero_card.dart';
 import '../../../core/widgets/stat_card.dart';
 import '../../../core/widgets/event_card.dart';
+import '../komponen/komponen_kegiatan_admin.dart';
 import 'halaman_kegiatan_admin.dart';
 import '../../../jadwal/admin/halaman/halaman_jadwal_admin.dart';
 import 'halaman_anggota_admin.dart';
@@ -72,7 +73,7 @@ class _HalamanBerandaAdminState extends State<HalamanBerandaAdmin> {
   }
 }
 
-// Widget Tab 1: Beranda Content (Angka Stat Dinamis dari Database)
+// Widget Tab 1: Beranda Content (Dinamis Terhubung ke Cloud Firestore)
 class _BerandaTabContent extends StatefulWidget {
   final String namaPengguna;
   final String peran;
@@ -89,33 +90,60 @@ class _BerandaTabContent extends StatefulWidget {
 }
 
 class _BerandaTabContentState extends State<_BerandaTabContent> {
-  int _jumlahKegiatan = 3;
-  int _jumlahAnggota = 5;
+  int _jumlahKegiatan = 0;
+  int _jumlahAnggota = 0;
   int _jumlahFoto = 0;
+  List<ModelKegiatanAdmin> _kegiatanTerdekat = [];
 
   @override
   void initState() {
     super.initState();
-    _hitungStatistikDinamis();
+    _muatDataRealtime();
   }
 
-  // Hitung jumlah data kegiatan, anggota, dan foto dari Cloud Firestore secara dinamis
-  void _hitungStatistikDinamis() async {
+  // Ambil data statistik dan daftar kegiatan terdekat dari Cloud Firestore / Local Data
+  void _muatDataRealtime() async {
     try {
       final snapKegiatan = await FirebaseFirestore.instance.collection('kegiatan').get();
       final snapAnggota = await FirebaseFirestore.instance.collection('users').get();
 
+      final List<ModelKegiatanAdmin> listKegiatan = [];
+      if (snapKegiatan.docs.isNotEmpty) {
+        for (var doc in snapKegiatan.docs) {
+          final data = doc.data();
+          listKegiatan.add(ModelKegiatanAdmin(
+            id: data['id'] ?? doc.id,
+            judul: data['judul'] ?? '',
+            tanggal: DateTime.tryParse(data['tanggal'] ?? '') ?? DateTime.now(),
+            waktu: data['waktu'] ?? '07:30 WIB',
+            lokasi: data['lokasi'] ?? '',
+            kategori: data['kategori'] ?? 'Sosial',
+            deskripsi: data['deskripsi'] ?? '',
+            status: data['status'] ?? 'Mendatang',
+          ));
+        }
+      } else {
+        // Fallback jika database Firestore baru dibuat
+        listKegiatan.addAll(dataKegiatanAwal);
+      }
+
       if (mounted) {
         setState(() {
-          if (snapKegiatan.docs.isNotEmpty) {
-            _jumlahKegiatan = snapKegiatan.docs.length;
-          }
-          if (snapAnggota.docs.isNotEmpty) {
-            _jumlahAnggota = snapAnggota.docs.length;
-          }
+          _kegiatanTerdekat = listKegiatan;
+          _jumlahKegiatan = listKegiatan.length;
+          _jumlahAnggota = snapAnggota.docs.isNotEmpty ? snapAnggota.docs.length : 5;
         });
       }
-    } catch (_) {}
+    } catch (_) {
+      // Fallback lokal
+      if (mounted) {
+        setState(() {
+          _kegiatanTerdekat = dataKegiatanAwal;
+          _jumlahKegiatan = dataKegiatanAwal.length;
+          _jumlahAnggota = 5;
+        });
+      }
+    }
   }
 
   @override
@@ -181,28 +209,28 @@ class _BerandaTabContentState extends State<_BerandaTabContent> {
           ),
           const SizedBox(height: 12),
 
-          // 4. List Kegiatan Terdekat dengan Date Badge
-          EventCard(
-            judul: 'Rapat Kerja Bulanan',
-            tanggal: DateTime(now.year, 10, 28),
-            lokasi: 'Balai Warga RW 05',
-            kategori: 'Rapat',
-            onTap: () => widget.onPindahTab(1),
-          ),
-          EventCard(
-            judul: 'Kerja Bakti Lingkungan',
-            tanggal: DateTime(now.year, 11, 2),
-            lokasi: 'Lapangan Utama',
-            kategori: 'Sosial',
-            onTap: () => widget.onPindahTab(1),
-          ),
-          EventCard(
-            judul: 'Turnamen Futsal Pemuda',
-            tanggal: DateTime(now.year, 11, 10),
-            lokasi: 'GOR Kecamatan',
-            kategori: 'Olahraga',
-            onTap: () => widget.onPindahTab(1),
-          ),
+          // 4. List Kegiatan Terdekat Dinamis Dari Database
+          _kegiatanTerdekat.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24.0),
+                    child: Text(
+                      'Belum ada kegiatan terdekat',
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                    ),
+                  ),
+                )
+              : Column(
+                  children: _kegiatanTerdekat.take(3).map((item) {
+                    return EventCard(
+                      judul: item.judul,
+                      tanggal: item.tanggal,
+                      lokasi: item.lokasi,
+                      kategori: item.kategori,
+                      onTap: () => widget.onPindahTab(1),
+                    );
+                  }).toList(),
+                ),
         ],
       ),
     );
