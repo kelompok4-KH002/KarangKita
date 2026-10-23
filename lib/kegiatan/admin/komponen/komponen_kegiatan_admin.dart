@@ -69,7 +69,7 @@ final List<ModelKegiatanAdmin> dataKegiatanAwal = [
   ),
 ];
 
-// Dialog Form Tambah / Edit Kegiatan dengan Calendar Picker Interaktif
+// Dialog Form Tambah / Edit Kegiatan dengan Pilihan Kategori Interaktif
 class DialogTambahEditKegiatan extends StatefulWidget {
   final ModelKegiatanAdmin? kegiatanEdit;
   final Function(ModelKegiatanAdmin) onSimpan;
@@ -110,7 +110,7 @@ class _DialogTambahEditKegiatanState extends State<DialogTambahEditKegiatan> {
     _lokasiController = TextEditingController(text: edit?.lokasi ?? '');
     _deskripsiController = TextEditingController(text: edit?.deskripsi ?? '');
     _statusTerpilih = edit?.status ?? 'Mendatang';
-    _kategoriTerpilih = edit?.kategori ?? 'Sosial';
+    _kategoriTerpilih = edit?.kategori ?? 'Olahraga';
   }
 
   @override
@@ -243,6 +243,20 @@ class _DialogTambahEditKegiatanState extends State<DialogTambahEditKegiatan> {
                         controller: _judulController,
                         decoration: _buildInputDecoration(hintText: 'Nama kegiatan Anda'),
                         validator: (val) => val == null || val.trim().isEmpty ? 'Nama kegiatan wajib diisi' : null,
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Kategori Kegiatan
+                      _buildInputLabel('Kategori Kegiatan'),
+                      DropdownButtonFormField<String>(
+                        value: _kategoriTerpilih,
+                        decoration: _buildInputDecoration(hintText: 'Pilih Kategori'),
+                        items: ['Olahraga', 'Sosial', 'Rapat', 'Edukasi']
+                            .map((kat) => DropdownMenuItem(value: kat, child: Text(kat)))
+                            .toList(),
+                        onChanged: (val) {
+                          if (val != null) setState(() => _kategoriTerpilih = val);
+                        },
                       ),
                       const SizedBox(height: 14),
 
