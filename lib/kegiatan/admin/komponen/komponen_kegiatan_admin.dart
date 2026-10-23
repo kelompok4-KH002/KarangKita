@@ -24,12 +24,13 @@ class ModelKegiatanAdmin {
   });
 }
 
-// Data Awal Contoh Sesuai Mockup Figma (`admin_pengurus_kelola_kegiatan.png`)
+// Data Awal Contoh Berdasarkan Tanggal Perangkat Real-Time
+final _now = DateTime.now();
 final List<ModelKegiatanAdmin> dataKegiatanAwal = [
   ModelKegiatanAdmin(
     id: 'K1',
     judul: 'Kerja Bakti Lingkungan RW 05',
-    tanggal: DateTime(2024, 11, 15),
+    tanggal: DateTime(_now.year, _now.month, _now.day).add(const Duration(days: 3)),
     waktu: '07:30 WIB',
     lokasi: 'Area RT 01 - 04',
     kategori: 'Sosial',
@@ -39,7 +40,7 @@ final List<ModelKegiatanAdmin> dataKegiatanAwal = [
   ModelKegiatanAdmin(
     id: 'K2',
     judul: 'Turnamen Voli Antar Pemuda',
-    tanggal: DateTime(2024, 11, 20),
+    tanggal: DateTime(_now.year, _now.month, _now.day).add(const Duration(days: 8)),
     waktu: '16:00 WIB',
     lokasi: 'Lapangan Utama',
     kategori: 'Olahraga',
@@ -49,7 +50,7 @@ final List<ModelKegiatanAdmin> dataKegiatanAwal = [
   ModelKegiatanAdmin(
     id: 'K3',
     judul: 'Rapat Pleno Kepengurusan',
-    tanggal: DateTime(2024, 10, 28),
+    tanggal: DateTime(_now.year, _now.month, _now.day).subtract(const Duration(days: 2)),
     waktu: '19:30 WIB',
     lokasi: 'Balai Warga Lt. 2',
     kategori: 'Rapat',
@@ -59,7 +60,7 @@ final List<ModelKegiatanAdmin> dataKegiatanAwal = [
   ModelKegiatanAdmin(
     id: 'K4',
     judul: 'Pelatihan Desain Grafis',
-    tanggal: DateTime(2024, 10, 10),
+    tanggal: DateTime(_now.year, _now.month, _now.day).subtract(const Duration(days: 10)),
     waktu: '13:00 WIB',
     lokasi: 'Sekretariat Karang Taruna',
     kategori: 'Edukasi',
@@ -99,9 +100,10 @@ class _DialogTambahEditKegiatanState extends State<DialogTambahEditKegiatan> {
   void initState() {
     super.initState();
     final edit = widget.kegiatanEdit;
+    final tgl = edit?.tanggal ?? DateTime.now();
     _judulController = TextEditingController(text: edit?.judul ?? '');
     _tanggalController = TextEditingController(
-      text: edit != null ? '${edit.tanggal.month}/${edit.tanggal.day}/${edit.tanggal.year}' : '11/15/2024',
+      text: '${tgl.month}/${tgl.day}/${tgl.year}',
     );
     _waktuController = TextEditingController(text: edit?.waktu ?? '07:30 WIB');
     _lokasiController = TextEditingController(text: edit?.lokasi ?? 'Area Lingkungan RW 05 (RT 01 - 04)');
