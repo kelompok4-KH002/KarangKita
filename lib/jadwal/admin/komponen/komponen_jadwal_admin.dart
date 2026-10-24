@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_constants.dart';
+import '../../../core/theme/app_text_styles.dart';
 
 // Model Data Jadwal Admin
 class ModelJadwalAdmin {
@@ -20,34 +22,8 @@ class ModelJadwalAdmin {
   });
 }
 
-// Data Awal Contoh Jadwal
-final _now = DateTime.now();
-final List<ModelJadwalAdmin> dataJadwalAdminAwal = [
-  ModelJadwalAdmin(
-    id: 'J1',
-    judul: 'Rapat Kerja Bulanan Pengurus',
-    tanggal: DateTime(_now.year, _now.month, _now.day).add(const Duration(days: 5)),
-    jam: '19:30 WIB',
-    lokasi: 'Balai Warga RW 05',
-    kategori: 'Rapat',
-  ),
-  ModelJadwalAdmin(
-    id: 'J2',
-    judul: 'Kerja Bakti Lingkungan RW 05',
-    tanggal: DateTime(_now.year, _now.month, _now.day).add(const Duration(days: 10)),
-    jam: '07:30 WIB',
-    lokasi: 'Area RT 01 - RT 06',
-    kategori: 'Kerja Bakti',
-  ),
-  ModelJadwalAdmin(
-    id: 'J3',
-    judul: 'Turnamen Futsal Pemuda',
-    tanggal: DateTime(_now.year, _now.month, _now.day).add(const Duration(days: 18)),
-    jam: '16:00 WIB',
-    lokasi: 'GOR Kecamatan',
-    kategori: 'Acara',
-  ),
-];
+// Data Awal Kosong (Murni dari Database Cloud Firestore)
+final List<ModelJadwalAdmin> dataJadwalAdminAwal = [];
 
 // Dialog Form Tambah / Edit Jadwal Admin Presisi Sesuai Mockup Figma (`admin_pengurus_edit_jadwal.png`)
 class DialogTambahEditJadwalAdmin extends StatefulWidget {
@@ -86,7 +62,9 @@ class _DialogTambahEditJadwalAdminState extends State<DialogTambahEditJadwalAdmi
     );
     _jamController = TextEditingController(text: edit?.jam ?? '');
     _lokasiController = TextEditingController(text: edit?.lokasi ?? '');
-    _kategoriTerpilih = edit?.kategori ?? 'Rapat';
+    
+    final kat = edit?.kategori ?? 'Rapat';
+    _kategoriTerpilih = AppConstants.kDaftarKategoriUtama.contains(kat) ? kat : 'Rapat';
   }
 
   @override
@@ -169,7 +147,7 @@ class _DialogTambahEditJadwalAdminState extends State<DialogTambahEditJadwalAdmi
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.r16),
         title: const Text('Hapus jadwal?', style: TextStyle(fontWeight: FontWeight.bold)),
         content: Text('Apakah Anda yakin ingin menghapus agenda "$namaAgenda"? Tindakan ini tidak dapat dibatalkan.'),
         actions: [
@@ -180,8 +158,8 @@ class _DialogTambahEditJadwalAdminState extends State<DialogTambahEditJadwalAdmi
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.danger,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              foregroundColor: AppColors.textWhite,
+              shape: RoundedRectangleBorder(borderRadius: AppRadius.r8),
             ),
             onPressed: () {
               Navigator.pop(context); // Tutup dialog konfirmasi
@@ -200,8 +178,8 @@ class _DialogTambahEditJadwalAdminState extends State<DialogTambahEditJadwalAdmi
     final isEdit = widget.jadwalEdit != null;
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      backgroundColor: const Color(0xFFF8FAFC),
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.r20),
+      backgroundColor: AppColors.background,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: Container(
         width: double.infinity,
@@ -223,11 +201,7 @@ class _DialogTambahEditJadwalAdminState extends State<DialogTambahEditJadwalAdmi
                     const SizedBox(width: 12),
                     Text(
                       isEdit ? 'Edit Jadwal' : 'Tambah Jadwal Agenda',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
+                      style: AppTextStyles.formTitle,
                     ),
                   ],
                 ),
@@ -238,7 +212,7 @@ class _DialogTambahEditJadwalAdminState extends State<DialogTambahEditJadwalAdmi
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: AppRadius.r16,
                     border: Border.all(color: AppColors.cardBorder),
                   ),
                   child: Column(
@@ -293,12 +267,12 @@ class _DialogTambahEditJadwalAdminState extends State<DialogTambahEditJadwalAdmi
                       ),
                       const SizedBox(height: 14),
 
-                      // Kategori
+                      // Kategori Terpadu
                       _buildInputLabel('Kategori Agenda'),
                       DropdownButtonFormField<String>(
                         value: _kategoriTerpilih,
                         decoration: _buildInputDecoration(hintText: 'Pilih Kategori'),
-                        items: ['Rapat', 'Kerja Bakti', 'Acara', 'Sosial', 'Olahraga']
+                        items: AppConstants.kDaftarKategoriUtama
                             .map((kat) => DropdownMenuItem(value: kat, child: Text(kat)))
                             .toList(),
                         onChanged: (val) {
@@ -317,8 +291,8 @@ class _DialogTambahEditJadwalAdminState extends State<DialogTambahEditJadwalAdmi
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      foregroundColor: AppColors.textWhite,
+                      shape: RoundedRectangleBorder(borderRadius: AppRadius.r12),
                       elevation: 0,
                     ),
                     onPressed: () {
@@ -341,7 +315,7 @@ class _DialogTambahEditJadwalAdminState extends State<DialogTambahEditJadwalAdmi
                       children: [
                         Icon(Icons.save_outlined, size: 18),
                         SizedBox(width: 8),
-                        Text('Simpan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                        Text('Simpan', style: AppTextStyles.buttonPrimary),
                       ],
                     ),
                   ),
@@ -356,7 +330,7 @@ class _DialogTambahEditJadwalAdminState extends State<DialogTambahEditJadwalAdmi
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.textPrimary,
                       side: const BorderSide(color: AppColors.cardBorder),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(borderRadius: AppRadius.r12),
                     ),
                     onPressed: () => Navigator.pop(context),
                     child: const Text('Batal', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -374,14 +348,7 @@ class _DialogTambahEditJadwalAdminState extends State<DialogTambahEditJadwalAdmi
                         children: [
                           Icon(Icons.delete_outline, size: 18, color: AppColors.danger),
                           SizedBox(width: 6),
-                          Text(
-                            'Hapus Jadwal',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.danger,
-                            ),
-                          ),
+                          Text('Hapus Jadwal', style: AppTextStyles.linkDanger),
                         ],
                       ),
                     ),
@@ -397,14 +364,7 @@ class _DialogTambahEditJadwalAdminState extends State<DialogTambahEditJadwalAdmi
   static Widget _buildInputLabel(String label) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6.0),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: AppColors.textPrimary,
-        ),
-      ),
+      child: Text(label, style: AppTextStyles.inputLabel),
     );
   }
 
@@ -415,22 +375,22 @@ class _DialogTambahEditJadwalAdminState extends State<DialogTambahEditJadwalAdmi
   }) {
     return InputDecoration(
       hintText: hintText,
-      hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+      hintStyle: AppTextStyles.inputHint,
       prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: AppColors.primary, size: 18) : null,
       suffixIcon: suffixIcon,
       filled: true,
-      fillColor: const Color(0xFFF8FAFC),
+      fillColor: AppColors.background,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: AppRadius.r10,
         borderSide: const BorderSide(color: AppColors.cardBorder),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: AppRadius.r10,
         borderSide: const BorderSide(color: AppColors.cardBorder),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: AppRadius.r10,
         borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
       ),
     );

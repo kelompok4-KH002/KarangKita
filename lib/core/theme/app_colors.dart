@@ -16,6 +16,7 @@ class AppColors {
   static const Color textMuted = Color(0xFF94A3B8);
   static const Color textWhite = Colors.white;
   
+  // Chip Colors per Kategori
   static const Color badgeBlueBg = Color(0xFFDBEAFE);
   static const Color badgeBlueText = Color(0xFF1D4ED8);
   
@@ -24,7 +25,29 @@ class AppColors {
 
   static const Color badgeOrangeBg = Color(0xFFFFEDD5);
   static const Color badgeOrangeText = Color(0xFFC2410C);
+
+  static const Color badgePurpleBg = Color(0xFFF3E8FF);
+  static const Color badgePurpleText = Color(0xFF7E22CE);
+
+  static const Color badgeTealBg = Color(0xFFCCFBF1);
+  static const Color badgeTealText = Color(0xFF0F766E);
+
+  static const Color badgeIndigoBg = Color(0xFFE0E7FF);
+  static const Color badgeIndigoText = Color(0xFF4338CA);
+
+  static const Color badgeNeutralBg = Color(0xFFF1F5F9);
+  static const Color badgeNeutralText = Color(0xFF475569);
   
   static const Color danger = Color(0xFFEF4444);
   static const Color dangerBg = Color(0xFFFEF2F2);
+}
+
+// Design Tokens Border Radius Terpusat
+class AppRadius {
+  static const BorderRadius r8 = BorderRadius.all(Radius.circular(8));
+  static const BorderRadius r10 = BorderRadius.all(Radius.circular(10));
+  static const BorderRadius r12 = BorderRadius.all(Radius.circular(12));
+  static const BorderRadius r16 = BorderRadius.all(Radius.circular(16));
+  static const BorderRadius r20 = BorderRadius.all(Radius.circular(20));
+  static const BorderRadius r30 = BorderRadius.all(Radius.circular(30));
 }

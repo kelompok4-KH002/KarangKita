@@ -31,13 +31,7 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
   @override
   void initState() {
     super.initState();
-    _daftarAnggota = [
-      ModelAnggotaAdmin(id: 'A1', nama: 'Nadhif Shidqi', jabatan: 'Ketua Karang Taruna'),
-      ModelAnggotaAdmin(id: 'A2', nama: 'Kireyna Putri', jabatan: 'Wakil Ketua'),
-      ModelAnggotaAdmin(id: 'A3', nama: 'Lucas Amadeus', jabatan: 'Sekretaris'),
-      ModelAnggotaAdmin(id: 'A4', nama: 'Elizabeth Wong', jabatan: 'Bendahara'),
-      ModelAnggotaAdmin(id: 'A5', nama: 'Amizola Saputra', jabatan: 'Seksi Humas & Acara'),
-    ];
+    _daftarAnggota = [];
     _muatUserFirestore();
   }
 

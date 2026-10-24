@@ -20,7 +20,7 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
   @override
   void initState() {
     super.initState();
-    _daftarJadwal = List.from(dataJadwalAdminAwal);
+    _daftarJadwal = [];
     _muatJadwalDariFirestore();
   }
 
@@ -120,6 +120,13 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
     final int jumlahHari = DateTime(_tanggalTerpilih.year, _tanggalTerpilih.month + 1, 0).day;
     final int hariMulaiIndex = (DateTime(_tanggalTerpilih.year, _tanggalTerpilih.month, 1).weekday - 1) % 7;
 
+    // Filter agenda khusus tanggal yang sedang dipilih
+    final agendaTersaring = _daftarJadwal.where((j) {
+      return j.tanggal.year == _tanggalTerpilih.year &&
+          j.tanggal.month == _tanggalTerpilih.month &&
+          j.tanggal.day == _tanggalTerpilih.day;
+    }).toList();
+
     return Scaffold(
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -162,11 +169,7 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
                   child: Center(
                     child: Text(
                       hari,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
+                      style: AppTextStyles.statLabel,
                     ),
                   ),
                 );
@@ -190,42 +193,41 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
                   return const SizedBox.shrink();
                 }
 
+                final DateTime tglIndex = DateTime(_tanggalTerpilih.year, _tanggalTerpilih.month, nomorHari);
                 final bool isTerpilih = nomorHari == _tanggalTerpilih.day;
+
+                // Hitung titik penanda agenda secara dinamis dari data asli
+                final bool adaAgenda = _daftarJadwal.any((j) =>
+                    j.tanggal.year == tglIndex.year &&
+                    j.tanggal.month == tglIndex.month &&
+                    j.tanggal.day == tglIndex.day);
 
                 return InkWell(
                   onTap: () {
                     setState(() {
-                      _tanggalTerpilih = DateTime(
-                        _tanggalTerpilih.year,
-                        _tanggalTerpilih.month,
-                        nomorHari,
-                      );
+                      _tanggalTerpilih = tglIndex;
                     });
                   },
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: AppRadius.r12,
                   child: Container(
                     decoration: BoxDecoration(
                       color: isTerpilih ? AppColors.primary : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: AppRadius.r12,
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
                           '$nomorHari',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: isTerpilih ? FontWeight.bold : FontWeight.normal,
-                            color: isTerpilih ? Colors.white : AppColors.textPrimary,
-                          ),
+                          style: isTerpilih ? AppTextStyles.calendarDaySelected : AppTextStyles.calendarDay,
                         ),
-                        if (nomorHari % 7 == 3 || nomorHari == 10 || nomorHari == 17 || nomorHari == 24 || nomorHari == 31)
+                        if (adaAgenda)
                           Container(
                             margin: const EdgeInsets.only(top: 2),
                             width: 4,
                             height: 4,
                             decoration: BoxDecoration(
-                              color: isTerpilih ? Colors.white : AppColors.primary,
+                              color: isTerpilih ? AppColors.textWhite : AppColors.primary,
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -245,34 +247,35 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
                   'Tanggal terpilih (${_tanggalTerpilih.day}/${_tanggalTerpilih.month}/${_tanggalTerpilih.year})',
                   style: AppTextStyles.cardTitle,
                 ),
-                Text(
+                const Text(
                   'Agenda',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                  style: AppTextStyles.statLabel,
                 ),
               ],
             ),
             const SizedBox(height: 12),
 
-            // Kartu Agenda Sesuai Mockup Figma
-            _daftarJadwal.isEmpty
-                ? Center(
+            // Kartu Agenda Filtered Sesuai Tanggal Terpilih
+            agendaTersaring.isEmpty
+                ? const Center(
                     child: Padding(
-                      padding: const EdgeInsets.all(24.0),
-                      child: Text('Belum ada agenda', style: TextStyle(color: Colors.grey.shade600)),
+                      padding: EdgeInsets.all(24.0),
+                      child: Text('Belum ada agenda di tanggal ini', style: AppTextStyles.statLabel),
                     ),
                   )
                 : ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _daftarJadwal.length,
+                    itemCount: agendaTersaring.length,
                     itemBuilder: (context, index) {
-                      final item = _daftarJadwal[index];
+                      final item = agendaTersaring[index];
+                      final origIndex = _daftarJadwal.indexOf(item);
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: AppRadius.r16,
                           border: Border.all(color: AppColors.cardBorder),
                         ),
                         child: Row(
@@ -306,15 +309,15 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
                                   context: context,
                                   builder: (context) => DialogTambahEditJadwalAdmin(
                                     jadwalEdit: item,
-                                    onSimpan: (newItem) => _editJadwal(index, newItem),
-                                    onHapus: () => _hapusJadwal(index),
+                                    onSimpan: (newItem) => _editJadwal(origIndex, newItem),
+                                    onHapus: () => _hapusJadwal(origIndex),
                                   ),
                                 );
                               },
                             ),
                             IconButton(
                               icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.primary),
-                              onPressed: () => _hapusJadwal(index),
+                              onPressed: () => _hapusJadwal(origIndex),
                             ),
                           ],
                         ),
@@ -330,9 +333,9 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.textWhite,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: AppRadius.r12,
                   ),
                 ),
                 onPressed: () {

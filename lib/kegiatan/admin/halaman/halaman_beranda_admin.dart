@@ -122,25 +122,19 @@ class _BerandaTabContentState extends State<_BerandaTabContent> {
             status: data['status'] ?? 'Mendatang',
           ));
         }
-      } else {
-        // Fallback jika database Firestore baru dibuat
-        listKegiatan.addAll(dataKegiatanAwal);
-      }
-
       if (mounted) {
         setState(() {
           _kegiatanTerdekat = listKegiatan;
           _jumlahKegiatan = listKegiatan.length;
-          _jumlahAnggota = snapAnggota.docs.isNotEmpty ? snapAnggota.docs.length : 5;
+          _jumlahAnggota = snapAnggota.docs.isNotEmpty ? snapAnggota.docs.length : 0;
         });
       }
     } catch (_) {
-      // Fallback lokal
       if (mounted) {
         setState(() {
-          _kegiatanTerdekat = dataKegiatanAwal;
-          _jumlahKegiatan = dataKegiatanAwal.length;
-          _jumlahAnggota = 5;
+          _kegiatanTerdekat = [];
+          _jumlahKegiatan = 0;
+          _jumlahAnggota = 0;
         });
       }
     }

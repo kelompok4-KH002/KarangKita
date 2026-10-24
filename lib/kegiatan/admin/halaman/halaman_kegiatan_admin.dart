@@ -18,7 +18,7 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
   @override
   void initState() {
     super.initState();
-    _daftarKegiatan = List.from(dataKegiatanAwal);
+    _daftarKegiatan = [];
     _muatDataDariFirestore();
   }
 

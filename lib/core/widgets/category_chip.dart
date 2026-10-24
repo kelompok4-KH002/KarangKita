@@ -1,0 +1,69 @@
+import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
+
+// Widget CategoryChip Terpadu Sesuai Design Token
+class CategoryChip extends StatelessWidget {
+  final String kategori;
+
+  const CategoryChip({
+    super.key,
+    required this.kategori,
+  });
+
+  Color get _bgColor {
+    switch (kategori) {
+      case 'Rapat':
+        return AppColors.badgeBlueBg;
+      case 'Sosial':
+        return AppColors.badgeGreenBg;
+      case 'Olahraga':
+        return AppColors.badgeOrangeBg;
+      case 'Edukasi':
+        return AppColors.badgePurpleBg;
+      case 'Kerja Bakti':
+        return AppColors.badgeTealBg;
+      case 'Acara':
+        return AppColors.badgeIndigoBg;
+      default:
+        return AppColors.badgeNeutralBg; // Fallback netral jika kategori tidak terdaftar
+    }
+  }
+
+  Color get _textColor {
+    switch (kategori) {
+      case 'Rapat':
+        return AppColors.badgeBlueText;
+      case 'Sosial':
+        return AppColors.badgeGreenText;
+      case 'Olahraga':
+        return AppColors.badgeOrangeText;
+      case 'Edukasi':
+        return AppColors.badgePurpleText;
+      case 'Kerja Bakti':
+        return AppColors.badgeTealText;
+      case 'Acara':
+        return AppColors.badgeIndigoText;
+      default:
+        return AppColors.badgeNeutralText; // Fallback netral jika kategori tidak terdaftar
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: _bgColor,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        kategori,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: _textColor,
+        ),
+      ),
+    );
+  }
+}

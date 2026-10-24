@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_constants.dart';
 
 // Model Data Kegiatan Admin
 class ModelKegiatanAdmin {
@@ -24,50 +25,8 @@ class ModelKegiatanAdmin {
   });
 }
 
-// Data Awal Contoh Berdasarkan Tanggal Perangkat Real-Time
-final _now = DateTime.now();
-final List<ModelKegiatanAdmin> dataKegiatanAwal = [
-  ModelKegiatanAdmin(
-    id: 'K1',
-    judul: 'Kerja Bakti Lingkungan RW 05',
-    tanggal: DateTime(_now.year, _now.month, _now.day).add(const Duration(days: 3)),
-    waktu: '07:30 WIB',
-    lokasi: 'Area RT 01 - 04',
-    kategori: 'Sosial',
-    deskripsi: 'Kerja bakti pembersihan saluran air, pemangkasan dahan pohon, dan pengelolaan sampah warga menjelang musim hujan.',
-    status: 'Mendatang',
-  ),
-  ModelKegiatanAdmin(
-    id: 'K2',
-    judul: 'Turnamen Voli Antar Pemuda',
-    tanggal: DateTime(_now.year, _now.month, _now.day).add(const Duration(days: 8)),
-    waktu: '16:00 WIB',
-    lokasi: 'Lapangan Utama',
-    kategori: 'Olahraga',
-    deskripsi: 'Turnamen voli mempererat silaturahmi pemuda karang taruna antar RT.',
-    status: 'Mendatang',
-  ),
-  ModelKegiatanAdmin(
-    id: 'K3',
-    judul: 'Rapat Pleno Kepengurusan',
-    tanggal: DateTime(_now.year, _now.month, _now.day).subtract(const Duration(days: 2)),
-    waktu: '19:30 WIB',
-    lokasi: 'Balai Warga Lt. 2',
-    kategori: 'Rapat',
-    deskripsi: 'Evaluasi program kerja triwulan dan perencanaan kegiatan akhir tahun.',
-    status: 'Selesai',
-  ),
-  ModelKegiatanAdmin(
-    id: 'K4',
-    judul: 'Pelatihan Desain Grafis',
-    tanggal: DateTime(_now.year, _now.month, _now.day).subtract(const Duration(days: 10)),
-    waktu: '13:00 WIB',
-    lokasi: 'Sekretariat Karang Taruna',
-    kategori: 'Edukasi',
-    deskripsi: 'Workshop peningkatkan skill publikasi & media sosial pemuda desa.',
-    status: 'Selesai',
-  ),
-];
+// Data Awal Kosong (Murni dari Cloud Firestore Database)
+final List<ModelKegiatanAdmin> dataKegiatanAwal = [];
 
 // Dialog Form Tambah / Edit Kegiatan dengan Pilihan Kategori Interaktif
 class DialogTambahEditKegiatan extends StatefulWidget {
@@ -110,7 +69,9 @@ class _DialogTambahEditKegiatanState extends State<DialogTambahEditKegiatan> {
     _lokasiController = TextEditingController(text: edit?.lokasi ?? '');
     _deskripsiController = TextEditingController(text: edit?.deskripsi ?? '');
     _statusTerpilih = edit?.status ?? 'Mendatang';
-    _kategoriTerpilih = edit?.kategori ?? 'Olahraga';
+    
+    final kat = edit?.kategori ?? 'Olahraga';
+    _kategoriTerpilih = AppConstants.kDaftarKategoriUtama.contains(kat) ? kat : 'Olahraga';
   }
 
   @override
@@ -136,7 +97,7 @@ class _DialogTambahEditKegiatanState extends State<DialogTambahEditKegiatan> {
     return defaultVal;
   }
 
-  // Buka kalender interaktif untuk memilih tanggal tanpa perlu ketik manual
+  // Buka kalender interaktif untuk memilih tanggal
   void _pilihTanggal() async {
     final tgl = await showDatePicker(
       context: context,
@@ -246,12 +207,12 @@ class _DialogTambahEditKegiatanState extends State<DialogTambahEditKegiatan> {
                       ),
                       const SizedBox(height: 14),
 
-                      // Kategori Kegiatan
+                      // Kategori Kegiatan Terpadu
                       _buildInputLabel('Kategori Kegiatan'),
                       DropdownButtonFormField<String>(
                         value: _kategoriTerpilih,
                         decoration: _buildInputDecoration(hintText: 'Pilih Kategori'),
-                        items: ['Olahraga', 'Sosial', 'Rapat', 'Edukasi']
+                        items: AppConstants.kDaftarKategoriUtama
                             .map((kat) => DropdownMenuItem(value: kat, child: Text(kat)))
                             .toList(),
                         onChanged: (val) {

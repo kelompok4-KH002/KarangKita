@@ -65,4 +65,43 @@ class AppTextStyles {
     fontWeight: FontWeight.bold,
     color: AppColors.textPrimary,
   );
+
+  static const TextStyle calendarDay = TextStyle(
+    fontSize: 14,
+    color: AppColors.textPrimary,
+  );
+
+  static const TextStyle calendarDaySelected = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.bold,
+    color: AppColors.textWhite,
+  );
+
+  static const TextStyle formTitle = TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+    color: AppColors.textPrimary,
+  );
+
+  static const TextStyle buttonPrimary = TextStyle(
+    fontSize: 15,
+    fontWeight: FontWeight.bold,
+  );
+
+  static const TextStyle linkDanger = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.bold,
+    color: AppColors.danger,
+  );
+
+  static const TextStyle inputLabel = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.bold,
+    color: AppColors.textPrimary,
+  );
+
+  static const TextStyle inputHint = TextStyle(
+    color: AppColors.textMuted,
+    fontSize: 13,
+  );
 }
