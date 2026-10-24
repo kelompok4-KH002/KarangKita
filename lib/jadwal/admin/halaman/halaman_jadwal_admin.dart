@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/date_badge.dart';
@@ -20,30 +21,89 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
   void initState() {
     super.initState();
     _daftarJadwal = List.from(dataJadwalAdminAwal);
+    _muatJadwalDariFirestore();
   }
 
-  void _tambahJadwal(ModelJadwalAdmin jadwal) {
+  void _muatJadwalDariFirestore() async {
+    try {
+      final snap = await FirebaseFirestore.instance.collection('jadwal').get();
+      if (snap.docs.isNotEmpty) {
+        final List<ModelJadwalAdmin> listDariCloud = [];
+        for (var doc in snap.docs) {
+          final data = doc.data();
+          listDariCloud.add(ModelJadwalAdmin(
+            id: data['id'] ?? doc.id,
+            judul: data['judul'] ?? '',
+            tanggal: DateTime.tryParse(data['tanggal'] ?? '') ?? DateTime.now(),
+            jam: data['jam'] ?? '19:30 WIB',
+            lokasi: data['lokasi'] ?? '',
+            kategori: data['kategori'] ?? 'Rapat',
+          ));
+        }
+        if (mounted) {
+          setState(() {
+            _daftarJadwal = listDariCloud;
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
+  void _tambahJadwal(ModelJadwalAdmin jadwal) async {
     setState(() {
       _daftarJadwal.insert(0, jadwal);
     });
+
+    try {
+      await FirebaseFirestore.instance.collection('jadwal').doc(jadwal.id).set({
+        'id': jadwal.id,
+        'judul': jadwal.judul,
+        'jam': jadwal.jam,
+        'lokasi': jadwal.lokasi,
+        'kategori': jadwal.kategori,
+        'tanggal': jadwal.tanggal.toIso8601String(),
+      }, SetOptions(merge: true));
+    } catch (_) {}
+
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Jadwal berhasil ditambahkan')),
     );
   }
 
-  void _editJadwal(int index, ModelJadwalAdmin jadwal) {
+  void _editJadwal(int index, ModelJadwalAdmin jadwal) async {
     setState(() {
       _daftarJadwal[index] = jadwal;
     });
+
+    try {
+      await FirebaseFirestore.instance.collection('jadwal').doc(jadwal.id).set({
+        'id': jadwal.id,
+        'judul': jadwal.judul,
+        'jam': jadwal.jam,
+        'lokasi': jadwal.lokasi,
+        'kategori': jadwal.kategori,
+        'tanggal': jadwal.tanggal.toIso8601String(),
+      }, SetOptions(merge: true));
+    } catch (_) {}
+
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Jadwal berhasil diperbarui')),
     );
   }
 
-  void _hapusJadwal(int index) {
+  void _hapusJadwal(int index) async {
+    final target = _daftarJadwal[index];
     setState(() {
       _daftarJadwal.removeAt(index);
     });
+
+    try {
+      await FirebaseFirestore.instance.collection('jadwal').doc(target.id).delete();
+    } catch (_) {}
+
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Jadwal berhasil dihapus')),
     );
@@ -193,7 +253,7 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
             ),
             const SizedBox(height: 12),
 
-            // Kartu Agenda dengan Date Badge
+            // Kartu Agenda Sesuai Mockup Figma
             _daftarJadwal.isEmpty
                 ? Center(
                     child: Padding(
@@ -247,6 +307,7 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
                                   builder: (context) => DialogTambahEditJadwalAdmin(
                                     jadwalEdit: item,
                                     onSimpan: (newItem) => _editJadwal(index, newItem),
+                                    onHapus: () => _hapusJadwal(index),
                                   ),
                                 );
                               },
