@@ -101,7 +101,7 @@ class _BerandaTabContentState extends State<_BerandaTabContent> {
     _muatDataRealtime();
   }
 
-  // Ambil data statistik dan daftar kegiatan terdekat dari Cloud Firestore / Local Data
+  // Ambil data statistik dan daftar kegiatan terdekat dari Cloud Firestore
   void _muatDataRealtime() async {
     try {
       final snapKegiatan = await FirebaseFirestore.instance.collection('kegiatan').get();
@@ -122,6 +122,8 @@ class _BerandaTabContentState extends State<_BerandaTabContent> {
             status: data['status'] ?? 'Mendatang',
           ));
         }
+      }
+
       if (mounted) {
         setState(() {
           _kegiatanTerdekat = listKegiatan;
