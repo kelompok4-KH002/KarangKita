@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
-// Widget CategoryChip Terpadu Sesuai Design Token
+// Widget CategoryChip / PeranBadge Terpadu Sesuai Design Token
 class CategoryChip extends StatelessWidget {
   final String kategori;
 
@@ -13,38 +13,58 @@ class CategoryChip extends StatelessWidget {
   Color get _bgColor {
     switch (kategori) {
       case 'Rapat':
+      case 'Pengurus':
         return AppColors.badgeBlueBg;
+
       case 'Sosial':
+      case 'Anggota':
         return AppColors.badgeGreenBg;
+
       case 'Olahraga':
+      case 'Menunggu persetujuan':
         return AppColors.badgeOrangeBg;
+
       case 'Edukasi':
         return AppColors.badgePurpleBg;
+
       case 'Kerja Bakti':
         return AppColors.badgeTealBg;
+
       case 'Acara':
+      case 'Ketua':
         return AppColors.badgeIndigoBg;
+
       default:
-        return AppColors.badgeNeutralBg; // Fallback netral jika kategori tidak terdaftar
+        return AppColors.badgeNeutralBg; // Fallback netral jika tidak terdaftar
     }
   }
 
   Color get _textColor {
     switch (kategori) {
       case 'Rapat':
+      case 'Pengurus':
         return AppColors.badgeBlueText;
+
       case 'Sosial':
+      case 'Anggota':
         return AppColors.badgeGreenText;
+
       case 'Olahraga':
+      case 'Menunggu persetujuan':
         return AppColors.badgeOrangeText;
+
       case 'Edukasi':
         return AppColors.badgePurpleText;
+
       case 'Kerja Bakti':
         return AppColors.badgeTealText;
+
       case 'Acara':
+      case 'Ketua':
         return AppColors.badgeIndigoText;
+
       default:
-        return AppColors.badgeNeutralText; // Fallback netral jika kategori tidak terdaftar
+        return AppColors.badgeNeutralText; // Fallback netral jika tidak terdaftar
     }
   }
 

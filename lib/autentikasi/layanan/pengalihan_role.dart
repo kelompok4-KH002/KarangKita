@@ -7,14 +7,12 @@ class ModelPengguna {
   final String nama;
   final String username;
   final String whatsapp;
-  final String password;
   final RolePengguna role;
 
   ModelPengguna({
     required this.nama,
     required this.username,
     required this.whatsapp,
-    required this.password,
     required this.role,
   });
 }
@@ -32,18 +30,7 @@ class HasilAutentikasi {
 }
 
 class LayananAutentikasi {
-  // data user lokal
-  static final List<ModelPengguna> _daftarPenggunaLokal = [
-    ModelPengguna(
-      nama: 'Administrator',
-      username: 'admin',
-      whatsapp: '081234567890',
-      password: 'admin123',
-      role: RolePengguna.admin,
-    ),
-  ];
-
-  // daftarkan akun baru
+  // daftarkan akun baru murni via Firebase Auth & Firestore
   static Future<HasilAutentikasi> daftar({
     required String nama,
     required String username,
@@ -91,14 +78,24 @@ class LayananAutentikasi {
           'createdAt': FieldValue.serverTimestamp(),
         });
       }
-    } catch (e) {
-      _daftarPenggunaLokal.add(ModelPengguna(
-        nama: nama,
-        username: u,
-        whatsapp: whatsapp,
-        password: p,
-        role: role,
-      ));
+    } on FirebaseAuthException catch (e) {
+      String pesanErr = 'Gagal mendaftar. Silakan coba lagi.';
+      if (e.code == 'email-already-in-use') {
+        pesanErr = 'Username/Email sudah terdaftar. Gunakan username lain.';
+      } else if (e.code == 'weak-password') {
+        pesanErr = 'Kata sandi terlalu lemah. Gunakan minimal 6 karakter.';
+      } else if (e.code == 'network-request-failed') {
+        pesanErr = 'Tidak dapat terhubung. Periksa koneksi internet Anda.';
+      }
+      return HasilAutentikasi(
+        sukses: false,
+        pesan: pesanErr,
+      );
+    } catch (_) {
+      return HasilAutentikasi(
+        sukses: false,
+        pesan: 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
+      );
     }
 
     String pesanSukses = 'Registrasi akun berhasil!';
@@ -113,7 +110,7 @@ class LayananAutentikasi {
     );
   }
 
-  // verifikasi login
+  // verifikasi login murni via Firebase Auth & Firestore
   static Future<HasilAutentikasi> login({
     required String username,
     required String password,
@@ -163,27 +160,22 @@ class LayananAutentikasi {
           );
         }
       }
-    } catch (e) {
-      final userIdx = _daftarPenggunaLokal.indexWhere(
-        (acc) => acc.username.toLowerCase() == u && acc.password == p,
+    } on FirebaseAuthException catch (e) {
+      String pesanErr = 'Username atau password tidak cocok.';
+      if (e.code == 'user-not-found' || e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        pesanErr = 'Username atau password tidak cocok.';
+      } else if (e.code == 'network-request-failed') {
+        pesanErr = 'Tidak dapat terhubung. Periksa koneksi internet Anda.';
+      }
+      return HasilAutentikasi(
+        sukses: false,
+        pesan: pesanErr,
       );
-
-      if (userIdx != -1) {
-        final user = _daftarPenggunaLokal[userIdx];
-        return HasilAutentikasi(
-          sukses: true,
-          pesan: 'Login berhasil sebagai ${user.nama}',
-          role: user.role,
-        );
-      }
-
-      if ((u == 'admin' && p == 'admin123') || (u == 'admin' && p == 'admin')) {
-        return HasilAutentikasi(
-          sukses: true,
-          pesan: 'Login berhasil sebagai Admin',
-          role: RolePengguna.admin,
-        );
-      }
+    } catch (_) {
+      return HasilAutentikasi(
+        sukses: false,
+        pesan: 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
+      );
     }
 
     return HasilAutentikasi(
