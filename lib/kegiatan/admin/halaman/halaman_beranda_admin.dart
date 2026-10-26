@@ -106,6 +106,16 @@ class _BerandaTabContentState extends State<_BerandaTabContent> {
     try {
       final snapKegiatan = await FirebaseFirestore.instance.collection('kegiatan').get();
       final snapAnggota = await FirebaseFirestore.instance.collection('users').get();
+      
+      // Ambil jumlah foto di koleksi galeri dengan count().get()
+      int totalFoto = 0;
+      try {
+        final countFotoSnap = await FirebaseFirestore.instance.collection('galeri').count().get();
+        totalFoto = countFotoSnap.count ?? 0;
+      } catch (e) {
+        // Jika count() gagal, fallback ke 0
+        totalFoto = 0;
+      }
 
       final List<ModelKegiatanAdmin> listKegiatan = [];
       if (snapKegiatan.docs.isNotEmpty) {
@@ -128,6 +138,7 @@ class _BerandaTabContentState extends State<_BerandaTabContent> {
           _kegiatanTerdekat = listKegiatan;
           _jumlahKegiatan = listKegiatan.length;
           _jumlahAnggota = snapAnggota.docs.isNotEmpty ? snapAnggota.docs.length : 0;
+          _jumlahFoto = totalFoto;
         });
       }
     } catch (e) {
@@ -136,6 +147,7 @@ class _BerandaTabContentState extends State<_BerandaTabContent> {
           _kegiatanTerdekat = [];
           _jumlahKegiatan = 0;
           _jumlahAnggota = 0;
+          _jumlahFoto = 0;
         });
       }
     }
