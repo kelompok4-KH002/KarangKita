@@ -30,6 +30,21 @@ class HasilAutentikasi {
 }
 
 class LayananAutentikasi {
+  // Mengambil peran terdaftar user yang sedang login dari Firestore
+  static Future<String> getPeranUserLogin() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return 'Anggota';
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      if (doc.exists) {
+        return doc.data()?['role'] ?? 'Anggota';
+      }
+    } catch (e) {
+      // Biarkan mengembalikan fallback jika gagal
+    }
+    return 'Anggota';
+  }
+
   // daftarkan akun baru murni via Firebase Auth & Firestore
   static Future<HasilAutentikasi> daftar({
     required String nama,

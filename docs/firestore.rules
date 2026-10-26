@@ -1,0 +1,95 @@
+// ==============================================================================
+// ARSIP FIRESTORE SECURITY RULES KARANGKITA
+// Status: AKTIF (Telah dipublish manual via Firebase Console pada proyek karangkita-d69d1)
+// PERINGATAN: File ini hanya dokumentasi lokal. Jangan jalankan firebase deploy CLI.
+// ==============================================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper Functions
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isApprovedAdmin() {
+      return isAuth() &&
+        (getUserData().role == 'Pengurus' || getUserData().role == 'Ketua' || getUserData().role == 'Admin') &&
+        getUserData().disetujui == true;
+    }
+
+    function isKetuaOrAdmin() {
+      return isAuth() &&
+        (getUserData().role == 'Ketua' || getUserData().role == 'Admin') &&
+        getUserData().disetujui == true;
+    }
+
+    // 1. KOLEKSI 'users'
+    match /users/{userId} {
+      // Baca: Pemilik dokumen sendiri OR Admin/Pengurus disetujui
+      allow read: if isAuth() && (request.auth.uid == userId || isApprovedAdmin());
+
+      // Buat Dokumen Baru (CREATE):
+      // A. Registrasi Mandiri: Peran 'Pengurus' wajib disetujui == false
+      // B. Tambah Anggota Baru oleh Admin: Hanya untuk peran 'Anggota' atau 'Warga'
+      allow create: if isAuth() && (
+        (
+          request.auth.uid == userId &&
+          (request.resource.data.role == 'Pengurus' || request.resource.data.role == 'Anggota' || request.resource.data.role == 'Warga') &&
+          (request.resource.data.role != 'Pengurus' || request.resource.data.disetujui == false) &&
+          (request.resource.data.role != 'Ketua' && request.resource.data.role != 'Admin')
+        )
+        ||
+        (
+          isApprovedAdmin() &&
+          (request.resource.data.role == 'Anggota' || request.resource.data.role == 'Warga')
+        )
+      );
+
+      // Edit Profil (UPDATE):
+      // A. User biasa mengedit nama/kontak sendiri: DILARANG merubah 'role' atau 'disetujui'
+      allow update: if isAuth() && request.auth.uid == userId &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'disetujui']);
+
+      // B. Pengurus Disetujui mengedit Anggota/Warga: HANYA BOLEH merubah 'nama' & 'whatsapp'
+      allow update: if isApprovedAdmin() && request.auth.uid != userId &&
+        (resource.data.role == 'Anggota' || resource.data.role == 'Warga') &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nama', 'whatsapp']);
+
+      // C. Ketua / Admin Utama: Boleh mengubah SELURUH field milik orang lain (DILARANG ubah role/disetujui sendiri)
+      allow update: if isKetuaOrAdmin() && request.auth.uid != userId;
+
+      // Hapus Akun (DELETE):
+      // - DILARANG menghapus akun milik sendiri
+      // - Ketua/Admin boleh menghapus akun siapapun (selain dirinya)
+      // - Pengurus disetujui HANYA BOLEH menghapus akun ber-peran 'Anggota' atau 'Warga'
+      allow delete: if isAuth() && request.auth.uid != userId && (
+        isKetuaOrAdmin() ||
+        (isApprovedAdmin() && (resource.data.role == 'Anggota' || resource.data.role == 'Warga'))
+      );
+    }
+
+    // 2. KOLEKSI 'kegiatan'
+    match /kegiatan/{kegiatanId} {
+      allow read: if isAuth();
+      allow create, update, delete: if isApprovedAdmin();
+    }
+
+    // 3. KOLEKSI 'jadwal' (Sementara selama migrasi)
+    match /jadwal/{jadwalId} {
+      allow read: if isAuth();
+      allow create, update, delete: if isApprovedAdmin();
+    }
+
+    // 4. KOLEKSI 'galeri'
+    match /galeri/{galeriId} {
+      allow read: if isAuth();
+      allow create, update, delete: if isApprovedAdmin();
+    }
+  }
+}

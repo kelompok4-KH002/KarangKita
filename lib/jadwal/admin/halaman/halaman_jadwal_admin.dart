@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../autentikasi/layanan/pengalihan_role.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/date_badge.dart';
 import '../komponen/komponen_jadwal_admin.dart';
+import '../layanan/layanan_migrasi_agenda.dart';
 
 // Halaman Kelola Jadwal Admin Sesuai Mockup Figma (`admin_pengurus_kelola_jadwal.png`)
 class HalamanJadwalAdmin extends StatefulWidget {
@@ -19,12 +21,25 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
   bool _sedangMemuat = true;
   bool _adaErrorMemuat = false;
   String _pesanErrorMemuat = '';
+  
+  bool _isKetuaOrAdmin = false;
+  bool _sedangMigrasi = false;
 
   @override
   void initState() {
     super.initState();
     _daftarJadwal = [];
+    _cekPeranLogin();
     _muatJadwalDariFirestore();
+  }
+
+  void _cekPeranLogin() async {
+    final role = await LayananAutentikasi.getPeranUserLogin();
+    if (mounted) {
+      setState(() {
+        _isKetuaOrAdmin = (role == 'Ketua' || role == 'Admin');
+      });
+    }
   }
 
   String _getPesanError(Object e) {
@@ -41,6 +56,7 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
     return 'Gagal menghapus jadwal, periksa koneksi internet';
   }
 
+  // Membaca murni dari koleksi 'kegiatan' (Satu sumber terpadu)
   void _muatJadwalDariFirestore() async {
     setState(() {
       _sedangMemuat = true;
@@ -48,7 +64,7 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
     });
 
     try {
-      final snap = await FirebaseFirestore.instance.collection('jadwal').get();
+      final snap = await FirebaseFirestore.instance.collection('kegiatan').get();
       final List<ModelJadwalAdmin> listDariCloud = [];
       for (var doc in snap.docs) {
         final data = doc.data();
@@ -56,7 +72,7 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
           id: data['id'] ?? doc.id,
           judul: data['judul'] ?? '',
           tanggal: DateTime.tryParse(data['tanggal'] ?? '') ?? DateTime.now(),
-          jam: data['jam'] ?? '19:30 WIB',
+          jam: data['waktu'] ?? data['jam'] ?? '19:30 WIB',
           lokasi: data['lokasi'] ?? '',
           kategori: data['kategori'] ?? 'Rapat',
         ));
@@ -82,13 +98,14 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
 
   void _tambahJadwal(ModelJadwalAdmin jadwal) async {
     try {
-      await FirebaseFirestore.instance.collection('jadwal').doc(jadwal.id).set({
+      await FirebaseFirestore.instance.collection('kegiatan').doc(jadwal.id).set({
         'id': jadwal.id,
         'judul': jadwal.judul,
-        'jam': jadwal.jam,
+        'waktu': jadwal.jam,
         'lokasi': jadwal.lokasi,
         'kategori': jadwal.kategori,
         'tanggal': jadwal.tanggal.toIso8601String(),
+        'deskripsi': '',
       }, SetOptions(merge: true));
 
       setState(() {
@@ -109,10 +126,10 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
 
   void _editJadwal(int index, ModelJadwalAdmin jadwal) async {
     try {
-      await FirebaseFirestore.instance.collection('jadwal').doc(jadwal.id).set({
+      await FirebaseFirestore.instance.collection('kegiatan').doc(jadwal.id).set({
         'id': jadwal.id,
         'judul': jadwal.judul,
-        'jam': jadwal.jam,
+        'waktu': jadwal.jam,
         'lokasi': jadwal.lokasi,
         'kategori': jadwal.kategori,
         'tanggal': jadwal.tanggal.toIso8601String(),
@@ -138,7 +155,7 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
     final target = _daftarJadwal[index];
 
     try {
-      await FirebaseFirestore.instance.collection('jadwal').doc(target.id).delete();
+      await FirebaseFirestore.instance.collection('kegiatan').doc(target.id).delete();
 
       setState(() {
         _daftarJadwal.removeAt(index);
@@ -154,6 +171,42 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
         SnackBar(content: Text(_getPesanErrorHapus(e)), backgroundColor: AppColors.danger),
       );
     }
+  }
+
+  void _jalankanMigrasi() async {
+    setState(() => _sedangMigrasi = true);
+    try {
+      final hasil = await LayananMigrasiAgenda.migrasikanJadwalKeKegiatan();
+      _muatJadwalDariFirestore();
+
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.r16),
+          title: const Text('Laporan Migrasi Agenda', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: Text(
+            'Migrasi Selesai!\n'
+            '• Total Agenda di Jadwal: ${hasil.totalJadwal}\n'
+            '• Berhasil Disalin ke Kegiatan: ${hasil.disalin}\n'
+            '• Dilewati (Sudah Ada/Duplikat): ${hasil.dilewati}',
+          ),
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: AppColors.textWhite),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Selesai'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_getPesanError(e)), backgroundColor: AppColors.danger),
+      );
+    }
+    if (mounted) setState(() => _sedangMigrasi = false);
   }
 
   @override
@@ -206,6 +259,26 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Tombol Migrasi Sekali Jalan Khusus Ketua / Admin
+            if (_isKetuaOrAdmin) ...[
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    shape: RoundedRectangleBorder(borderRadius: AppRadius.r10),
+                  ),
+                  onPressed: _sedangMigrasi ? null : _jalankanMigrasi,
+                  icon: _sedangMigrasi
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.sync_rounded, size: 18),
+                  label: Text(_sedangMigrasi ? 'Proses Migrasi...' : 'Migrasikan Data Jadwal ke Kegiatan'),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+
             // Header Bulan & Tahun Navigasi
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

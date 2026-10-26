@@ -11,7 +11,6 @@ class ModelKegiatanAdmin {
   final String lokasi;
   final String kategori;
   final String deskripsi;
-  final String status; // Mendatang / Selesai
 
   ModelKegiatanAdmin({
     required this.id,
@@ -21,8 +20,17 @@ class ModelKegiatanAdmin {
     required this.lokasi,
     required this.kategori,
     required this.deskripsi,
-    required this.status,
   });
+
+  // Hitung status 'Mendatang' vs 'Selesai' secara dinamis dari tanggal relatif terhadap hari ini
+  String get status {
+    final todayStart = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final tglStart = DateTime(tanggal.year, tanggal.month, tanggal.day);
+    if (tglStart.isAfter(todayStart) || tglStart.isAtSameMomentAs(todayStart)) {
+      return 'Mendatang';
+    }
+    return 'Selesai';
+  }
 }
 
 // Data Awal Kosong (Murni dari Cloud Firestore Database)
@@ -52,7 +60,6 @@ class _DialogTambahEditKegiatanState extends State<DialogTambahEditKegiatan> {
   late TextEditingController _waktuController;
   late TextEditingController _lokasiController;
   late TextEditingController _deskripsiController;
-  late String _statusTerpilih;
   late String _kategoriTerpilih;
   late DateTime _tanggalObj;
 
@@ -68,7 +75,6 @@ class _DialogTambahEditKegiatanState extends State<DialogTambahEditKegiatan> {
     _waktuController = TextEditingController(text: edit?.waktu ?? '');
     _lokasiController = TextEditingController(text: edit?.lokasi ?? '');
     _deskripsiController = TextEditingController(text: edit?.deskripsi ?? '');
-    _statusTerpilih = edit?.status ?? 'Mendatang';
     
     final kat = edit?.kategori ?? 'Olahraga';
     _kategoriTerpilih = AppConstants.kDaftarKategoriUtama.contains(kat) ? kat : 'Olahraga';
@@ -271,95 +277,6 @@ class _DialogTambahEditKegiatanState extends State<DialogTambahEditKegiatan> {
                         decoration: _buildInputDecoration(hintText: 'Tuliskan deskripsi kegiatan...'),
                         validator: (val) => val == null || val.trim().isEmpty ? 'Deskripsi wajib diisi' : null,
                       ),
-                      const SizedBox(height: 14),
-
-                      // Status Kegiatan Segmented Pill
-                      _buildInputLabel('Status Kegiatan'),
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEEF2FF),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () => setState(() => _statusTerpilih = 'Mendatang'),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: _statusTerpilih == 'Mendatang' ? Colors.white : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(8),
-                                    boxShadow: _statusTerpilih == 'Mendatang'
-                                        ? [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4)]
-                                        : null,
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        width: 8,
-                                        height: 8,
-                                        decoration: const BoxDecoration(
-                                          color: Colors.amber,
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      const Text(
-                                        'Mendatang',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.primary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () => setState(() => _statusTerpilih = 'Selesai'),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: _statusTerpilih == 'Selesai' ? Colors.white : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(8),
-                                    boxShadow: _statusTerpilih == 'Selesai'
-                                        ? [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4)]
-                                        : null,
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        width: 8,
-                                        height: 8,
-                                        decoration: const BoxDecoration(
-                                          color: Colors.grey,
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      const Text(
-                                        'Selesai',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.textSecondary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -387,7 +304,6 @@ class _DialogTambahEditKegiatanState extends State<DialogTambahEditKegiatan> {
                           lokasi: _lokasiController.text.trim(),
                           kategori: _kategoriTerpilih,
                           deskripsi: _deskripsiController.text.trim(),
-                          status: _statusTerpilih,
                         );
                         widget.onSimpan(hasil);
                         Navigator.pop(context);

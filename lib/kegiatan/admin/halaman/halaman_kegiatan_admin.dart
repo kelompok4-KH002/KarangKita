@@ -58,7 +58,6 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
           lokasi: data['lokasi'] ?? '',
           kategori: data['kategori'] ?? 'Sosial',
           deskripsi: data['deskripsi'] ?? '',
-          status: data['status'] ?? 'Mendatang',
         ));
       }
       if (mounted) {
@@ -89,9 +88,8 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
         'lokasi': kegiatan.lokasi,
         'kategori': kegiatan.kategori,
         'deskripsi': kegiatan.deskripsi,
-        'status': kegiatan.status,
         'tanggal': kegiatan.tanggal.toIso8601String(),
-      });
+      }, SetOptions(merge: true));
 
       setState(() {
         _daftarKegiatan.insert(0, kegiatan);
@@ -118,7 +116,6 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
         'lokasi': kegiatan.lokasi,
         'kategori': kegiatan.kategori,
         'deskripsi': kegiatan.deskripsi,
-        'status': kegiatan.status,
         'tanggal': kegiatan.tanggal.toIso8601String(),
       }, SetOptions(merge: true));
 
@@ -201,6 +198,7 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
       );
     }
 
+    // Status 'Mendatang' vs 'Selesai' dihitung secara dinamis via getter kegiatan.status
     final listMendatang = _daftarKegiatan.where((k) => k.status == 'Mendatang').toList();
     final listSelesai = _daftarKegiatan.where((k) => k.status == 'Selesai').toList();
 
