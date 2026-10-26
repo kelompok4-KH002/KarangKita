@@ -15,5 +15,6 @@ class AppConstants {
     'Ketua',
     'Pengurus',
     'Anggota',
+    'Warga',
   ];
 }

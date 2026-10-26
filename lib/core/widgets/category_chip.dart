@@ -28,6 +28,7 @@ class CategoryChip extends StatelessWidget {
         return AppColors.badgePurpleBg;
 
       case 'Kerja Bakti':
+      case 'Warga':
         return AppColors.badgeTealBg;
 
       case 'Acara':
@@ -57,6 +58,7 @@ class CategoryChip extends StatelessWidget {
         return AppColors.badgePurpleText;
 
       case 'Kerja Bakti':
+      case 'Warga':
         return AppColors.badgeTealText;
 
       case 'Acara':

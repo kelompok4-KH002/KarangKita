@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/widgets/date_badge.dart';
+import '../../../core/theme/app_text_styles.dart';
 import '../komponen/komponen_kegiatan_admin.dart';
 
 // Halaman Kelola Kegiatan Admin High-Fidelity Sesuai Mockup Figma (`admin_pengurus_kelola_kegiatan.png`)
@@ -14,6 +14,9 @@ class HalamanKegiatanAdmin extends StatefulWidget {
 
 class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
   late List<ModelKegiatanAdmin> _daftarKegiatan;
+  bool _sedangMemuat = true;
+  bool _adaErrorMemuat = false;
+  String _pesanErrorMemuat = '';
 
   @override
   void initState() {
@@ -22,39 +25,62 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
     _muatDataDariFirestore();
   }
 
-  // Ambil data kegiatan dari Cloud Firestore jika ada
+  String _getPesanError(Object e) {
+    if (e is FirebaseException && e.code == 'permission-denied') {
+      return 'Anda tidak punya izin untuk tindakan ini';
+    }
+    return 'Gagal menyimpan, periksa koneksi internet';
+  }
+
+  String _getPesanErrorHapus(Object e) {
+    if (e is FirebaseException && e.code == 'permission-denied') {
+      return 'Anda tidak punya izin untuk tindakan ini';
+    }
+    return 'Gagal menghapus kegiatan, periksa koneksi internet';
+  }
+
   void _muatDataDariFirestore() async {
+    setState(() {
+      _sedangMemuat = true;
+      _adaErrorMemuat = false;
+    });
+
     try {
       final snap = await FirebaseFirestore.instance.collection('kegiatan').get();
-      if (snap.docs.isNotEmpty) {
-        final List<ModelKegiatanAdmin> listDariCloud = [];
-        for (var doc in snap.docs) {
-          final data = doc.data();
-          listDariCloud.add(ModelKegiatanAdmin(
-            id: data['id'] ?? doc.id,
-            judul: data['judul'] ?? '',
-            tanggal: DateTime.tryParse(data['tanggal'] ?? '') ?? DateTime.now(),
-            waktu: data['waktu'] ?? '07:30 WIB',
-            lokasi: data['lokasi'] ?? '',
-            kategori: data['kategori'] ?? 'Sosial',
-            deskripsi: data['deskripsi'] ?? '',
-            status: data['status'] ?? 'Mendatang',
-          ));
-        }
-        if (mounted) {
-          setState(() {
-            _daftarKegiatan = listDariCloud;
-          });
-        }
+      final List<ModelKegiatanAdmin> listDariCloud = [];
+      for (var doc in snap.docs) {
+        final data = doc.data();
+        listDariCloud.add(ModelKegiatanAdmin(
+          id: data['id'] ?? doc.id,
+          judul: data['judul'] ?? '',
+          tanggal: DateTime.tryParse(data['tanggal'] ?? '') ?? DateTime.now(),
+          waktu: data['waktu'] ?? '07:30 WIB',
+          lokasi: data['lokasi'] ?? '',
+          kategori: data['kategori'] ?? 'Sosial',
+          deskripsi: data['deskripsi'] ?? '',
+          status: data['status'] ?? 'Mendatang',
+        ));
       }
-    } catch (_) {}
+      if (mounted) {
+        setState(() {
+          _daftarKegiatan = listDariCloud;
+          _sedangMemuat = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _sedangMemuat = false;
+          _adaErrorMemuat = true;
+          _pesanErrorMemuat = e is FirebaseException && e.code == 'permission-denied'
+              ? 'Anda tidak punya izin untuk membaca data ini'
+              : 'Gagal memuat data, periksa koneksi internet';
+        });
+      }
+    }
   }
 
   void _tambahKegiatan(ModelKegiatanAdmin kegiatan) async {
-    setState(() {
-      _daftarKegiatan.insert(0, kegiatan);
-    });
-
     try {
       await FirebaseFirestore.instance.collection('kegiatan').doc(kegiatan.id).set({
         'id': kegiatan.id,
@@ -65,20 +91,25 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
         'deskripsi': kegiatan.deskripsi,
         'status': kegiatan.status,
         'tanggal': kegiatan.tanggal.toIso8601String(),
-      }, SetOptions(merge: true));
-    } catch (_) {}
+      });
 
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Kegiatan berhasil ditambahkan')),
-    );
+      setState(() {
+        _daftarKegiatan.insert(0, kegiatan);
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Kegiatan berhasil ditambahkan')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_getPesanError(e)), backgroundColor: AppColors.danger),
+      );
+    }
   }
 
   void _editKegiatan(int index, ModelKegiatanAdmin kegiatan) async {
-    setState(() {
-      _daftarKegiatan[index] = kegiatan;
-    });
-
     try {
       await FirebaseFirestore.instance.collection('kegiatan').doc(kegiatan.id).set({
         'id': kegiatan.id,
@@ -90,28 +121,43 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
         'status': kegiatan.status,
         'tanggal': kegiatan.tanggal.toIso8601String(),
       }, SetOptions(merge: true));
-    } catch (_) {}
 
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Kegiatan berhasil diperbarui')),
-    );
+      setState(() {
+        _daftarKegiatan[index] = kegiatan;
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Kegiatan berhasil diperbarui')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_getPesanError(e)), backgroundColor: AppColors.danger),
+      );
+    }
   }
 
   void _hapusKegiatan(int index) async {
     final target = _daftarKegiatan[index];
-    setState(() {
-      _daftarKegiatan.removeAt(index);
-    });
 
     try {
       await FirebaseFirestore.instance.collection('kegiatan').doc(target.id).delete();
-    } catch (_) {}
 
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Kegiatan berhasil dihapus')),
-    );
+      setState(() {
+        _daftarKegiatan.removeAt(index);
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Kegiatan berhasil dihapus')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_getPesanErrorHapus(e)), backgroundColor: AppColors.danger),
+      );
+    }
   }
 
   IconData _getKategoriIcon(String kategori) {
@@ -129,6 +175,32 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
 
   @override
   Widget build(BuildContext context) {
+    if (_sedangMemuat) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_adaErrorMemuat) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(_pesanErrorMemuat, style: AppTextStyles.statLabel),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: AppColors.textWhite),
+                onPressed: _muatDataDariFirestore,
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Coba lagi'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final listMendatang = _daftarKegiatan.where((k) => k.status == 'Mendatang').toList();
     final listSelesai = _daftarKegiatan.where((k) => k.status == 'Selesai').toList();
 
@@ -339,8 +411,8 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
             children: [
               Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEEF2FF),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEEF2FF),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(

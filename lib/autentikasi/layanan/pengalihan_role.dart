@@ -91,7 +91,7 @@ class LayananAutentikasi {
         sukses: false,
         pesan: pesanErr,
       );
-    } catch (_) {
+    } catch (e) {
       return HasilAutentikasi(
         sukses: false,
         pesan: 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
@@ -143,6 +143,8 @@ class LayananAutentikasi {
           final roleStr = doc.data()?['role'] ?? 'Pengurus';
 
           if (!isDisetujui && roleStr == 'Pengurus') {
+            // Wajib signOut() terlebih dahulu jika belum disetujui
+            await FirebaseAuth.instance.signOut();
             return HasilAutentikasi(
               sukses: false,
               pesan: 'Akun Pengurus Anda belum disetujui (ACC) oleh Admin Utama. Silakan hubungi Ketua Karang Taruna.',
@@ -158,6 +160,13 @@ class LayananAutentikasi {
             pesan: 'Login berhasil!',
             role: role,
           );
+        } else {
+          // Dokumen users tidak ditemukan di Firestore: Wajib signOut()
+          await FirebaseAuth.instance.signOut();
+          return HasilAutentikasi(
+            sukses: false,
+            pesan: 'Data profil akun tidak ditemukan di server.',
+          );
         }
       }
     } on FirebaseAuthException catch (e) {
@@ -171,7 +180,7 @@ class LayananAutentikasi {
         sukses: false,
         pesan: pesanErr,
       );
-    } catch (_) {
+    } catch (e) {
       return HasilAutentikasi(
         sukses: false,
         pesan: 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',

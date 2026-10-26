@@ -16,6 +16,9 @@ class HalamanJadwalAdmin extends StatefulWidget {
 class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
   DateTime _tanggalTerpilih = DateTime.now();
   late List<ModelJadwalAdmin> _daftarJadwal;
+  bool _sedangMemuat = true;
+  bool _adaErrorMemuat = false;
+  String _pesanErrorMemuat = '';
 
   @override
   void initState() {
@@ -24,36 +27,60 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
     _muatJadwalDariFirestore();
   }
 
+  String _getPesanError(Object e) {
+    if (e is FirebaseException && e.code == 'permission-denied') {
+      return 'Anda tidak punya izin untuk tindakan ini';
+    }
+    return 'Gagal menyimpan, periksa koneksi internet';
+  }
+
+  String _getPesanErrorHapus(Object e) {
+    if (e is FirebaseException && e.code == 'permission-denied') {
+      return 'Anda tidak punya izin untuk tindakan ini';
+    }
+    return 'Gagal menghapus jadwal, periksa koneksi internet';
+  }
+
   void _muatJadwalDariFirestore() async {
+    setState(() {
+      _sedangMemuat = true;
+      _adaErrorMemuat = false;
+    });
+
     try {
       final snap = await FirebaseFirestore.instance.collection('jadwal').get();
-      if (snap.docs.isNotEmpty) {
-        final List<ModelJadwalAdmin> listDariCloud = [];
-        for (var doc in snap.docs) {
-          final data = doc.data();
-          listDariCloud.add(ModelJadwalAdmin(
-            id: data['id'] ?? doc.id,
-            judul: data['judul'] ?? '',
-            tanggal: DateTime.tryParse(data['tanggal'] ?? '') ?? DateTime.now(),
-            jam: data['jam'] ?? '19:30 WIB',
-            lokasi: data['lokasi'] ?? '',
-            kategori: data['kategori'] ?? 'Rapat',
-          ));
-        }
-        if (mounted) {
-          setState(() {
-            _daftarJadwal = listDariCloud;
-          });
-        }
+      final List<ModelJadwalAdmin> listDariCloud = [];
+      for (var doc in snap.docs) {
+        final data = doc.data();
+        listDariCloud.add(ModelJadwalAdmin(
+          id: data['id'] ?? doc.id,
+          judul: data['judul'] ?? '',
+          tanggal: DateTime.tryParse(data['tanggal'] ?? '') ?? DateTime.now(),
+          jam: data['jam'] ?? '19:30 WIB',
+          lokasi: data['lokasi'] ?? '',
+          kategori: data['kategori'] ?? 'Rapat',
+        ));
       }
-    } catch (_) {}
+      if (mounted) {
+        setState(() {
+          _daftarJadwal = listDariCloud;
+          _sedangMemuat = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _sedangMemuat = false;
+          _adaErrorMemuat = true;
+          _pesanErrorMemuat = e is FirebaseException && e.code == 'permission-denied'
+              ? 'Anda tidak punya izin untuk membaca data ini'
+              : 'Gagal memuat data, periksa koneksi internet';
+        });
+      }
+    }
   }
 
   void _tambahJadwal(ModelJadwalAdmin jadwal) async {
-    setState(() {
-      _daftarJadwal.insert(0, jadwal);
-    });
-
     try {
       await FirebaseFirestore.instance.collection('jadwal').doc(jadwal.id).set({
         'id': jadwal.id,
@@ -63,19 +90,24 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
         'kategori': jadwal.kategori,
         'tanggal': jadwal.tanggal.toIso8601String(),
       }, SetOptions(merge: true));
-    } catch (_) {}
 
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Jadwal berhasil ditambahkan')),
-    );
+      setState(() {
+        _daftarJadwal.insert(0, jadwal);
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Jadwal berhasil ditambahkan')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_getPesanError(e)), backgroundColor: AppColors.danger),
+      );
+    }
   }
 
   void _editJadwal(int index, ModelJadwalAdmin jadwal) async {
-    setState(() {
-      _daftarJadwal[index] = jadwal;
-    });
-
     try {
       await FirebaseFirestore.instance.collection('jadwal').doc(jadwal.id).set({
         'id': jadwal.id,
@@ -85,32 +117,73 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
         'kategori': jadwal.kategori,
         'tanggal': jadwal.tanggal.toIso8601String(),
       }, SetOptions(merge: true));
-    } catch (_) {}
 
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Jadwal berhasil diperbarui')),
-    );
+      setState(() {
+        _daftarJadwal[index] = jadwal;
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Jadwal berhasil diperbarui')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_getPesanError(e)), backgroundColor: AppColors.danger),
+      );
+    }
   }
 
   void _hapusJadwal(int index) async {
     final target = _daftarJadwal[index];
-    setState(() {
-      _daftarJadwal.removeAt(index);
-    });
 
     try {
       await FirebaseFirestore.instance.collection('jadwal').doc(target.id).delete();
-    } catch (_) {}
 
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Jadwal berhasil dihapus')),
-    );
+      setState(() {
+        _daftarJadwal.removeAt(index);
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Jadwal berhasil dihapus')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_getPesanErrorHapus(e)), backgroundColor: AppColors.danger),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_sedangMemuat) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_adaErrorMemuat) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(_pesanErrorMemuat, style: AppTextStyles.statLabel),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: AppColors.textWhite),
+                onPressed: _muatJadwalDariFirestore,
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Coba lagi'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     const List<String> namaHari = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
     const List<String> namaBulan = [
       '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',

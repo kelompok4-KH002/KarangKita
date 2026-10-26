@@ -35,6 +35,11 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
   final TextEditingController _searchController = TextEditingController();
   late List<ModelAnggotaAdmin> _daftarAnggota;
   bool _sedangMemuat = true;
+  bool _adaErrorMemuat = false;
+  String _pesanErrorMemuat = '';
+  
+  String _currentUserRole = 'Anggota';
+  String _currentUserId = '';
 
   @override
   void initState() {
@@ -49,32 +54,74 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
     super.dispose();
   }
 
-  // Muat data anggota dari Cloud Firestore
+  String _getPesanError(Object e) {
+    if (e is FirebaseException && e.code == 'permission-denied') {
+      return 'Anda tidak punya izin untuk tindakan ini';
+    }
+    return 'Gagal menyimpan, periksa koneksi internet';
+  }
+
+  String _getPesanErrorHapus(Object e) {
+    if (e is FirebaseException && e.code == 'permission-denied') {
+      return 'Anda tidak punya izin untuk tindakan ini';
+    }
+    return 'Gagal menghapus anggota, periksa koneksi internet';
+  }
+
+  // Muat data anggota & profil user yang sedang login dari Cloud Firestore
   void _muatUserFirestore() async {
-    setState(() => _sedangMemuat = true);
+    setState(() {
+      _sedangMemuat = true;
+      _adaErrorMemuat = false;
+    });
+
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      _currentUserId = uid;
+    }
+
     try {
       final snap = await FirebaseFirestore.instance.collection('users').get();
-      if (snap.docs.isNotEmpty) {
-        final List<ModelAnggotaAdmin> cloudList = [];
-        for (var doc in snap.docs) {
-          final data = doc.data();
-          cloudList.add(ModelAnggotaAdmin(
-            id: doc.id,
-            nama: data['nama'] ?? data['username'] ?? 'Pengguna',
-            jabatan: data['role'] ?? 'Anggota',
-            whatsapp: data['whatsapp'] ?? '081234567890',
-            disetujui: data['disetujui'] ?? true,
-          ));
+      final List<ModelAnggotaAdmin> cloudList = [];
+      
+      for (var doc in snap.docs) {
+        final data = doc.data();
+        final docId = doc.id;
+        final userRole = data['role'] ?? 'Anggota';
+        
+        if (docId == _currentUserId) {
+          _currentUserRole = userRole;
         }
-        if (mounted) {
-          setState(() {
-            _daftarAnggota = cloudList;
-          });
-        }
+
+        cloudList.add(ModelAnggotaAdmin(
+          id: docId,
+          nama: data['nama'] ?? data['username'] ?? 'Pengguna',
+          jabatan: userRole,
+          whatsapp: data['whatsapp'] ?? '081234567890',
+          disetujui: data['disetujui'] ?? true,
+        ));
       }
-    } catch (_) {}
-    if (mounted) setState(() => _sedangMemuat = false);
+
+      if (mounted) {
+        setState(() {
+          _daftarAnggota = cloudList;
+          _sedangMemuat = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _sedangMemuat = false;
+          _adaErrorMemuat = true;
+          _pesanErrorMemuat = e is FirebaseException && e.code == 'permission-denied'
+              ? 'Anda tidak punya izin untuk membaca data ini'
+              : 'Gagal memuat data, periksa koneksi internet';
+        });
+      }
+    }
   }
+
+  bool get _isKetuaOrAdmin => _currentUserRole == 'Ketua' || _currentUserRole == 'Admin';
 
   List<ModelAnggotaAdmin> _getFiltered() {
     final query = _searchController.text.toLowerCase().trim();
@@ -86,56 +133,76 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
     }).toList();
   }
 
-  void _simpanAnggota(ModelAnggotaAdmin item, bool isEdit) async {
-    final currentList = List<ModelAnggotaAdmin>.from(_daftarAnggota);
-    if (isEdit) {
-      final idx = currentList.indexWhere((a) => a.id == item.id);
-      if (idx != -1) currentList[idx] = item;
-    } else {
-      currentList.insert(0, item);
-    }
-
-    setState(() {
-      _daftarAnggota = currentList;
-    });
-
+  void _simpanAnggota(ModelAnggotaAdmin item, bool isEdit, Map<String, dynamic> updatePayload) async {
     try {
-      await FirebaseFirestore.instance.collection('users').doc(item.id).set({
-        'uid': item.id,
-        'nama': item.nama,
-        'role': item.jabatan,
-        'whatsapp': item.whatsapp,
-        'disetujui': item.disetujui,
-      }, SetOptions(merge: true));
-    } catch (_) {}
+      // 1. Tulis ke Firestore DULU
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(item.id)
+          .set(updatePayload, SetOptions(merge: true));
 
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(isEdit ? 'Data anggota berhasil diperbarui' : 'Anggota baru berhasil ditambahkan')),
-    );
+      // 2. Jika Firestore BERHASIL, perbarui list lokal
+      final currentList = List<ModelAnggotaAdmin>.from(_daftarAnggota);
+      if (isEdit) {
+        final idx = currentList.indexWhere((a) => a.id == item.id);
+        if (idx != -1) currentList[idx] = item;
+      } else {
+        currentList.insert(0, item);
+      }
+
+      setState(() {
+        _daftarAnggota = currentList;
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(isEdit ? 'Data anggota berhasil diperbarui' : 'Anggota baru berhasil ditambahkan')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_getPesanError(e)), backgroundColor: AppColors.danger),
+      );
+    }
   }
 
   void _setujuiAkun(ModelAnggotaAdmin item) async {
-    final updated = ModelAnggotaAdmin(
-      id: item.id,
-      nama: item.nama,
-      jabatan: item.jabatan,
-      whatsapp: item.whatsapp,
-      disetujui: true,
-    );
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(item.id).update({
+        'disetujui': true,
+      });
 
-    _simpanAnggota(updated, true);
+      final updated = ModelAnggotaAdmin(
+        id: item.id,
+        nama: item.nama,
+        jabatan: item.jabatan,
+        whatsapp: item.whatsapp,
+        disetujui: true,
+      );
 
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Akun Pengurus ${item.nama} berhasil disetujui (ACC)!')),
-    );
+      final currentList = List<ModelAnggotaAdmin>.from(_daftarAnggota);
+      final idx = currentList.indexWhere((a) => a.id == item.id);
+      if (idx != -1) currentList[idx] = updated;
+
+      setState(() {
+        _daftarAnggota = currentList;
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Akun Pengurus ${item.nama} berhasil disetujui (ACC)!')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_getPesanError(e)), backgroundColor: AppColors.danger),
+      );
+    }
   }
 
   void _hapusAnggota(ModelAnggotaAdmin item) {
-    // Proteksi: Mencegah Admin menghapus akunnya sendiri
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-    if (item.id == currentUserId) {
+    // Proteksi: Mencegah Admin/Ketua/Pengurus menghapus akunnya sendiri
+    if (item.id == _currentUserId) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Anda tidak dapat menghapus akun Anda sendiri!'),
@@ -154,7 +221,7 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Batal', style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text('Batal', style: AppTextStyles.cardSubtitle),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -164,19 +231,26 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
             ),
             onPressed: () async {
               Navigator.pop(context); // Tutup dialog konfirmasi
-              
-              setState(() {
-                _daftarAnggota.removeWhere((a) => a.id == item.id);
-              });
 
               try {
+                // 1. Hapus di Firestore DULU
                 await FirebaseFirestore.instance.collection('users').doc(item.id).delete();
-              } catch (_) {}
 
-              if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Anggota ${item.nama} berhasil dihapus')),
-              );
+                // 2. Jika Firestore BERHASIL, hapus dari list lokal
+                setState(() {
+                  _daftarAnggota.removeWhere((a) => a.id == item.id);
+                });
+
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Anggota ${item.nama} berhasil dihapus')),
+                );
+              } catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(_getPesanErrorHapus(e)), backgroundColor: AppColors.danger),
+                );
+              }
             },
             child: const Text('Hapus'),
           ),
@@ -190,8 +264,9 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
       context: context,
       builder: (context) => DialogTambahEditAnggota(
         anggotaEdit: editItem,
-        onSimpan: (newItem) => _simpanAnggota(newItem, editItem != null),
-        onSetujui: editItem != null && !editItem.disetujui ? () => _setujuiAkun(editItem) : null,
+        isKetuaOrAdmin: _isKetuaOrAdmin,
+        onSimpan: (newItem, payload) => _simpanAnggota(newItem, editItem != null, payload),
+        onSetujui: editItem != null && !editItem.disetujui && _isKetuaOrAdmin ? () => _setujuiAkun(editItem) : null,
         onHapus: editItem != null ? () => _hapusAnggota(editItem) : null,
       ),
     );
@@ -199,6 +274,30 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
 
   @override
   Widget build(BuildContext context) {
+    if (_sedangMemuat) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (_adaErrorMemuat) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(_pesanErrorMemuat, style: AppTextStyles.statLabel),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: AppColors.textWhite),
+                onPressed: _muatUserFirestore,
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Coba lagi'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final listFiltered = _getFiltered();
 
     return Scaffold(
@@ -235,30 +334,28 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
 
           // List Items atau Empty States
           Expanded(
-            child: _sedangMemuat
-                ? const Center(child: CircularProgressIndicator())
-                : _daftarAnggota.isEmpty
+            child: _daftarAnggota.isEmpty
+                ? const Center(
+                    child: Text(
+                      'Belum ada anggota terdaftar',
+                      style: AppTextStyles.statLabel,
+                    ),
+                  )
+                : listFiltered.isEmpty
                     ? const Center(
                         child: Text(
-                          'Belum ada anggota terdaftar',
+                          'Anggota tidak ditemukan',
                           style: AppTextStyles.statLabel,
                         ),
                       )
-                    : listFiltered.isEmpty
-                        ? const Center(
-                            child: Text(
-                              'Anggota tidak ditemukan',
-                              style: AppTextStyles.statLabel,
-                            ),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                            itemCount: listFiltered.length,
-                            itemBuilder: (context, index) {
-                              final item = listFiltered[index];
-                              return _buildMemberCard(item);
-                            },
-                          ),
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                        itemCount: listFiltered.length,
+                        itemBuilder: (context, index) {
+                          final item = listFiltered[index];
+                          return _buildMemberCard(item);
+                        },
+                      ),
           ),
         ],
       ),
@@ -272,6 +369,12 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
   }
 
   Widget _buildMemberCard(ModelAnggotaAdmin item) {
+    // Tombol Hapus X hanya tampil jika diperbolehkan:
+    // - Ketua/Admin: untuk semua akun selain dirinya
+    // - Pengurus: hanya untuk akun Anggota atau Warga
+    final bool bolehHapus = item.id != _currentUserId &&
+        (_isKetuaOrAdmin || item.jabatan == 'Anggota' || item.jabatan == 'Warga');
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -279,11 +382,11 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
         color: AppColors.surface,
         borderRadius: AppRadius.r16,
         border: Border.all(color: AppColors.cardBorder),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: AppColors.cardShadow,
             blurRadius: 6,
-            offset: const Offset(0, 2),
+            offset: Offset(0, 2),
           ),
         ],
       ),
@@ -336,10 +439,11 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
             icon: const Icon(Icons.edit_outlined, size: 20, color: AppColors.primary),
             onPressed: () => _bukaModalForm(item),
           ),
-          IconButton(
-            icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.primary),
-            onPressed: () => _hapusAnggota(item),
-          ),
+          if (bolehHapus)
+            IconButton(
+              icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.primary),
+              onPressed: () => _hapusAnggota(item),
+            ),
         ],
       ),
     );
@@ -349,13 +453,15 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
 // Dialog Form Tambah / Edit Anggota
 class DialogTambahEditAnggota extends StatefulWidget {
   final ModelAnggotaAdmin? anggotaEdit;
-  final Function(ModelAnggotaAdmin) onSimpan;
+  final bool isKetuaOrAdmin;
+  final Function(ModelAnggotaAdmin, Map<String, dynamic>) onSimpan;
   final VoidCallback? onSetujui;
   final VoidCallback? onHapus;
 
   const DialogTambahEditAnggota({
     super.key,
     this.anggotaEdit,
+    required this.isKetuaOrAdmin,
     required this.onSimpan,
     this.onSetujui,
     this.onHapus,
@@ -378,9 +484,10 @@ class _DialogTambahEditAnggotaState extends State<DialogTambahEditAnggota> {
     final edit = widget.anggotaEdit;
     _namaController = TextEditingController(text: edit?.nama ?? '');
     _whatsappController = TextEditingController(text: edit?.whatsapp ?? '');
-    
-    final peran = edit?.jabatan ?? 'Anggota';
-    _peranTerpilih = AppConstants.kDaftarPeranUtama.contains(peran) ? peran : 'Anggota';
+
+    // Pertahankan peran awal anggota persis apa adanya saat edit
+    final peranAwal = edit?.jabatan ?? 'Anggota';
+    _peranTerpilih = AppConstants.kDaftarPeranUtama.contains(peranAwal) ? peranAwal : 'Anggota';
   }
 
   @override
@@ -394,6 +501,15 @@ class _DialogTambahEditAnggotaState extends State<DialogTambahEditAnggota> {
   Widget build(BuildContext context) {
     final isEdit = widget.anggotaEdit != null;
     final isPendingAcc = editPendingAcc(widget.anggotaEdit);
+
+    // Opsi Dropdown Peran:
+    // - Mode TAMBAH Anggota: HANYA 'Anggota' dan 'Warga'
+    // - Mode EDIT (oleh Ketua/Admin): Pilihan lengkap ['Ketua', 'Pengurus', 'Anggota', 'Warga']
+    final List<String> daftarPilihanPeran = !isEdit
+        ? ['Anggota', 'Warga']
+        : widget.isKetuaOrAdmin
+            ? AppConstants.kDaftarPeranUtama
+            : [_peranTerpilih];
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: AppRadius.r20),
@@ -452,16 +568,32 @@ class _DialogTambahEditAnggotaState extends State<DialogTambahEditAnggota> {
 
                       // Peran / Jabatan
                       _buildInputLabel('Peran / Jabatan'),
-                      DropdownButtonFormField<String>(
-                        value: _peranTerpilih,
-                        decoration: _buildInputDecoration(hintText: 'Pilih Peran'),
-                        items: AppConstants.kDaftarPeranUtama
-                            .map((p) => DropdownMenuItem(value: p, child: Text(p)))
-                            .toList(),
-                        onChanged: (val) {
-                          if (val != null) setState(() => _peranTerpilih = val);
-                        },
-                      ),
+                      if (isEdit && !widget.isKetuaOrAdmin)
+                        // Pengurus melihat peran sebagai teks read-only
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: AppColors.background,
+                            borderRadius: AppRadius.r10,
+                            border: Border.all(color: AppColors.cardBorder),
+                          ),
+                          child: Text(
+                            _peranTerpilih,
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+                          ),
+                        )
+                      else
+                        DropdownButtonFormField<String>(
+                          value: _peranTerpilih,
+                          decoration: _buildInputDecoration(hintText: 'Pilih Peran'),
+                          items: daftarPilihanPeran
+                              .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                              .toList(),
+                          onChanged: (val) {
+                            if (val != null) setState(() => _peranTerpilih = val);
+                          },
+                        ),
                       const SizedBox(height: 14),
 
                       // Nomor WhatsApp
@@ -492,8 +624,8 @@ class _DialogTambahEditAnggotaState extends State<DialogTambahEditAnggota> {
                 ),
                 const SizedBox(height: 16),
 
-                // Tombol ACC Khusus (Opsi A) jika status disetujui == false
-                if (isPendingAcc && widget.onSetujui != null) ...[
+                // Tombol ACC Khusus (Opsi A) jika status disetujui == false (Hanya untuk Ketua/Admin)
+                if (isPendingAcc && widget.isKetuaOrAdmin && widget.onSetujui != null) ...[
                   SizedBox(
                     width: double.infinity,
                     height: 44,
@@ -536,14 +668,36 @@ class _DialogTambahEditAnggotaState extends State<DialogTambahEditAnggota> {
                         : () async {
                             if (_formKey.currentState!.validate()) {
                               setState(() => _prosesSimpan = true);
+                              final editItem = widget.anggotaEdit;
+                              final namaNew = _namaController.text.trim();
+                              final waNew = _whatsappController.text.trim();
+
+                              // Konstruksi Payload Presisi:
+                              // Jika Pengurus mengedit, HANYA kirim 'nama' dan 'whatsapp' jika role/disetujui tidak diubah!
+                              final Map<String, dynamic> updatePayload = {
+                                'nama': namaNew,
+                                'whatsapp': waNew,
+                              };
+
+                              if (!isEdit) {
+                                updatePayload['uid'] = DateTime.now().millisecondsSinceEpoch.toString();
+                                updatePayload['role'] = _peranTerpilih;
+                                updatePayload['disetujui'] = true;
+                              } else if (widget.isKetuaOrAdmin) {
+                                // Ketua/Admin yang mengubah peran
+                                updatePayload['role'] = _peranTerpilih;
+                                updatePayload['disetujui'] = editItem?.disetujui ?? true;
+                              }
+
                               final hasil = ModelAnggotaAdmin(
-                                id: widget.anggotaEdit?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
-                                nama: _namaController.text.trim(),
-                                jabatan: _peranTerpilih,
-                                whatsapp: _whatsappController.text.trim(),
-                                disetujui: widget.anggotaEdit?.disetujui ?? true,
+                                id: editItem?.id ?? updatePayload['uid'],
+                                nama: namaNew,
+                                jabatan: isEdit ? (widget.isKetuaOrAdmin ? _peranTerpilih : editItem!.jabatan) : _peranTerpilih,
+                                whatsapp: waNew,
+                                disetujui: editItem?.disetujui ?? true,
                               );
-                              widget.onSimpan(hasil);
+
+                              widget.onSimpan(hasil, updatePayload);
                               if (mounted) Navigator.pop(context);
                             }
                           },
@@ -551,7 +705,7 @@ class _DialogTambahEditAnggotaState extends State<DialogTambahEditAnggota> {
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            child: CircularProgressIndicator(color: AppColors.textWhite, strokeWidth: 2),
                           )
                         : const Row(
                             mainAxisAlignment: MainAxisAlignment.center,

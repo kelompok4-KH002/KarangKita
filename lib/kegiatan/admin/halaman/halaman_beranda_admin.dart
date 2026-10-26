@@ -131,7 +131,7 @@ class _BerandaTabContentState extends State<_BerandaTabContent> {
           _jumlahAnggota = snapAnggota.docs.isNotEmpty ? snapAnggota.docs.length : 0;
         });
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         setState(() {
           _kegiatanTerdekat = [];

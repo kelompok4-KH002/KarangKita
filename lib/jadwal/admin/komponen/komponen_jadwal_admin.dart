@@ -85,7 +85,9 @@ class _DialogTambahEditJadwalAdminState extends State<DialogTambahEditJadwalAdmi
         final y = int.parse(parts[2]);
         return DateTime(y, m, d);
       }
-    } catch (_) {}
+    } catch (e) {
+      // Biarkan mengembalikan defaultVal jika gagal di-parse
+    }
     return defaultVal;
   }
 

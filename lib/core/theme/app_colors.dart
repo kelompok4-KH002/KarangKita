@@ -10,13 +10,14 @@ class AppColors {
   static const Color background = Color(0xFFF8FAFC); // Latar Belakang Terang
   static const Color surface = Colors.white;
   static const Color cardBorder = Color(0xFFE2E8F0);
+  static const Color cardShadow = Color(0x05000000);
   
   static const Color textPrimary = Color(0xFF0F172A);
   static const Color textSecondary = Color(0xFF64748B);
   static const Color textMuted = Color(0xFF94A3B8);
   static const Color textWhite = Colors.white;
   
-  // Chip Colors per Kategori
+  // Chip Colors per Kategori & Peran
   static const Color badgeBlueBg = Color(0xFFDBEAFE);
   static const Color badgeBlueText = Color(0xFF1D4ED8);
   
