@@ -119,7 +119,6 @@ class _BerandaTabContentState extends State<_BerandaTabContent> {
             lokasi: data['lokasi'] ?? '',
             kategori: data['kategori'] ?? 'Sosial',
             deskripsi: data['deskripsi'] ?? '',
-            status: data['status'] ?? 'Mendatang',
           ));
         }
       }
