@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_constants.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_header.dart';
 import '../../../core/widgets/app_drawer.dart';
@@ -14,6 +15,7 @@ import 'halaman_kegiatan_admin.dart';
 import '../../../jadwal/admin/halaman/halaman_jadwal_admin.dart';
 import 'halaman_anggota_admin.dart';
 import 'halaman_galeri_admin.dart';
+import '../../../usulan/halaman/halaman_usulan.dart';
 
 // Container Utama Admin dengan BottomNavigationBar & Navigation Drawer
 class HalamanBerandaAdmin extends StatefulWidget {
@@ -61,7 +63,7 @@ class _HalamanBerandaAdminState extends State<HalamanBerandaAdmin> {
               _namaPenggunaReal = namaCloud.toString().trim();
             }
             if (roleCloud.toString().trim().isNotEmpty) {
-              _peranReal = roleCloud.toString().trim();
+              _peranReal = AppConstants.normalisasiPeran(roleCloud);
             }
           });
         }
@@ -84,6 +86,7 @@ class _HalamanBerandaAdminState extends State<HalamanBerandaAdmin> {
         },
       ),
       const HalamanKegiatanAdmin(),
+      HalamanUsulan(namaPengguna: _namaPenggunaReal, peran: _peranReal),
       const HalamanJadwalAdmin(),
       const HalamanAnggotaAdmin(),
       const HalamanGaleriAdmin(),

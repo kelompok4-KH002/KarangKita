@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -776,7 +776,7 @@ class _HalamanTambahDokumentasiState extends State<HalamanTambahDokumentasi> {
 
         for (var file in selected) {
           // Validasi tipe ekstensi foto (hanya .jpg, .jpeg, .png)
-          final pathLower = file.path.toLowerCase();
+          final pathLower = file.name.toLowerCase();
           if (!pathLower.endsWith('.jpg') &&
               !pathLower.endsWith('.jpeg') &&
               !pathLower.endsWith('.png')) {
@@ -895,7 +895,11 @@ class _HalamanTambahDokumentasiState extends State<HalamanTambahDokumentasi> {
         final uri = Uri.parse('https://api.cloudinary.com/v1_1/${AppConstants.kCloudinaryCloudName}/image/upload');
         final request = http.MultipartRequest('POST', uri)
           ..fields['upload_preset'] = AppConstants.kCloudinaryUploadPreset
-          ..files.add(await http.MultipartFile.fromPath('file', file.path));
+          ..files.add(http.MultipartFile.fromBytes(
+            'file',
+            await file.readAsBytes(),
+            filename: file.name,
+          ));
 
         final streamedResp = await request.send();
         final resp = await http.Response.fromStream(streamedResp);
@@ -1148,10 +1152,7 @@ class _HalamanTambahDokumentasiState extends State<HalamanTambahDokumentasi> {
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            Image.file(
-                              File(file.path),
-                              fit: BoxFit.cover,
-                            ),
+                            _PratinjauFoto(file: file),
                             // Tombol Silang X untuk menghapus foto dari antrean
                             Positioned(
                               top: 4,
@@ -1351,6 +1352,29 @@ class _HalamanTambahDokumentasiState extends State<HalamanTambahDokumentasi> {
         borderRadius: AppRadius.r10,
         borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
       ),
+    );
+  }
+}
+
+// Pratinjau foto antrean unggah: memakai bytes agar jalan di web dan mobile
+class _PratinjauFoto extends StatelessWidget {
+  final XFile file;
+
+  const _PratinjauFoto({required this.file});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Uint8List>(
+      future: file.readAsBytes(),
+      builder: (context, snapshot) {
+        if (snapshot.hasData) {
+          return Image.memory(snapshot.data!, fit: BoxFit.cover);
+        }
+        if (snapshot.hasError) {
+          return const Center(child: Icon(Icons.broken_image_outlined));
+        }
+        return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+      },
     );
   }
 }

@@ -7,7 +7,7 @@ import '../../../core/theme/app_text_styles.dart';
 class ModelJadwalAdmin {
   final String id;
   final String judul;
-  final String targetPeserta; // 'Pengurus' atau 'Umum / Warga'
+  final String targetPeserta; // 'Pengurus' atau 'Semua Anggota'
   final DateTime tanggal;
   final String waktuMulai;
   final String waktuSelesai;
@@ -273,7 +273,7 @@ class _HalamanFormJadwalAdminState extends State<HalamanFormJadwalAdmin> {
                       SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Agenda yang ditambahkan akan otomatis tersinkronisasi ke kalender kegiatan pengurus dan warga terpilih.',
+                          'Agenda yang ditambahkan akan otomatis tersinkronisasi ke kalender kegiatan pengurus dan anggota terpilih.',
                           style: TextStyle(fontSize: 12, color: AppColors.primary),
                         ),
                       ),
@@ -357,15 +357,15 @@ class _HalamanFormJadwalAdminState extends State<HalamanFormJadwalAdmin> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: InkWell(
-                            onTap: () => setState(() => _targetPeserta = 'Umum / Warga'),
+                            onTap: () => setState(() => _targetPeserta = 'Semua Anggota'),
                             borderRadius: AppRadius.r12,
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               decoration: BoxDecoration(
-                                color: _targetPeserta == 'Umum / Warga' ? AppColors.primary : AppColors.background,
+                                color: _targetPeserta == 'Semua Anggota' ? AppColors.primary : AppColors.background,
                                 borderRadius: AppRadius.r12,
                                 border: Border.all(
-                                  color: _targetPeserta == 'Umum / Warga' ? AppColors.primary : AppColors.cardBorder,
+                                  color: _targetPeserta == 'Semua Anggota' ? AppColors.primary : AppColors.cardBorder,
                                 ),
                               ),
                               child: Row(
@@ -374,15 +374,15 @@ class _HalamanFormJadwalAdminState extends State<HalamanFormJadwalAdmin> {
                                   Icon(
                                     Icons.people_outline,
                                     size: 18,
-                                    color: _targetPeserta == 'Umum / Warga' ? AppColors.textWhite : AppColors.textPrimary,
+                                    color: _targetPeserta == 'Semua Anggota' ? AppColors.textWhite : AppColors.textPrimary,
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'Umum / Warga',
+                                    'Semua Anggota',
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 13,
-                                      color: _targetPeserta == 'Umum / Warga' ? AppColors.textWhite : AppColors.textPrimary,
+                                      color: _targetPeserta == 'Semua Anggota' ? AppColors.textWhite : AppColors.textPrimary,
                                     ),
                                   ),
                                 ],

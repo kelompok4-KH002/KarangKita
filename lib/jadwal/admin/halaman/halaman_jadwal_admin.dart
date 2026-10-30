@@ -60,7 +60,10 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
         listDariCloud.add(ModelJadwalAdmin(
           id: data['id'] ?? doc.id,
           judul: data['judul'] ?? '',
-          targetPeserta: data['targetPeserta'] ?? 'Pengurus',
+          // Data lama bernilai 'Umum / Warga' dipetakan ke 'Semua Anggota'
+          targetPeserta: data['targetPeserta'] == 'Umum / Warga'
+              ? 'Semua Anggota'
+              : (data['targetPeserta'] ?? 'Pengurus'),
           tanggal: DateTime.tryParse(data['tanggal'] ?? '') ?? DateTime.now(),
           waktuMulai: wktMulai,
           waktuSelesai: wktSelesai,

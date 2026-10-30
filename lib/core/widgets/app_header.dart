@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
-import '../../autentikasi/halaman/halaman_login.dart';
+import '../../autentikasi/layanan/pengalihan_role.dart';
+import '../../notifikasi/komponen/ikon_notifikasi.dart';
 
 // AppHeader Seragam (Hamburger Kiri, Title KarangKita, Profile Kanan dengan Popup & Confirm Logout)
 class AppHeader extends StatelessWidget implements PreferredSizeWidget {
@@ -36,12 +37,11 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
               foregroundColor: AppColors.textWhite,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            onPressed: () {
-              Navigator.pop(context); // Tutup dialog
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const HalamanLogin()),
-              );
+            onPressed: () async {
+              final nav = Navigator.of(context);
+              nav.pop(); // Tutup dialog
+              await LayananAutentikasi.keluar();
+              nav.popUntil((route) => route.isFirst);
             },
             child: const Text('Keluar'),
           ),
@@ -66,6 +66,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
       ),
       centerTitle: true,
       actions: [
+        const IkonNotifikasi(),
         PopupMenuButton<String>(
           offset: const Offset(0, 48),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../komponen/komponen_kegiatan_admin.dart';
+import 'halaman_detail_kegiatan.dart';
 
 // Halaman Kelola Kegiatan Admin High-Fidelity Sesuai Mockup Figma (`admin_pengurus_kelola_kegiatan.png`)
 class HalamanKegiatanAdmin extends StatefulWidget {
@@ -59,6 +60,8 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
           kategori: data['kategori'] ?? 'Sosial',
           deskripsi: data['deskripsi'] ?? '',
           manualStatus: data['status'],
+          lat: (data['lat'] as num?)?.toDouble(),
+          lng: (data['lng'] as num?)?.toDouble(),
         ));
       }
       if (mounted) {
@@ -91,6 +94,8 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
         'deskripsi': kegiatan.deskripsi,
         'status': kegiatan.status,
         'tanggal': kegiatan.tanggal.toIso8601String(),
+        'lat': kegiatan.lat,
+        'lng': kegiatan.lng,
       }, SetOptions(merge: true));
 
       setState(() {
@@ -120,6 +125,8 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
         'deskripsi': kegiatan.deskripsi,
         'status': kegiatan.status,
         'tanggal': kegiatan.tanggal.toIso8601String(),
+        'lat': kegiatan.lat,
+        'lng': kegiatan.lng,
       }, SetOptions(merge: true));
 
       setState(() {
@@ -250,6 +257,10 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
                       final origIndex = _daftarKegiatan.indexOf(item);
                       return _buildKegiatanCard(
                         item: item,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => HalamanDetailKegiatan(kegiatan: item)),
+                        ),
                         onEdit: () => _bukaHalamanFormKegiatan(
                           kegiatanEdit: item,
                           origIndex: origIndex,
@@ -280,6 +291,10 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
                       final origIndex = _daftarKegiatan.indexOf(item);
                       return _buildKegiatanCard(
                         item: item,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => HalamanDetailKegiatan(kegiatan: item)),
+                        ),
                         onEdit: () => _bukaHalamanFormKegiatan(
                           kegiatanEdit: item,
                           origIndex: origIndex,
@@ -342,12 +357,16 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
 
   Widget _buildKegiatanCard({
     required ModelKegiatanAdmin item,
+    required VoidCallback onTap,
     required VoidCallback onEdit,
     required VoidCallback onHapus,
   }) {
     final bool isSelesai = item.status == 'Selesai';
 
-    return Container(
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -406,6 +425,11 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
                   style: AppTextStyles.cardSubtitle,
                 ),
               ),
+              if (item.punyaKoordinat)
+                const Padding(
+                  padding: EdgeInsets.only(left: 4),
+                  child: Icon(Icons.map_outlined, size: 14, color: AppColors.primary),
+                ),
             ],
           ),
           const SizedBox(height: 12),
@@ -496,6 +520,7 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
             ],
           ),
         ],
+      ),
       ),
     );
   }

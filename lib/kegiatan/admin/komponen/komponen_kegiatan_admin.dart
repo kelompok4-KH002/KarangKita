@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_constants.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../peta/komponen/komponen_peta.dart';
 
 // Model Data Kegiatan Admin
 class ModelKegiatanAdmin {
@@ -13,6 +14,10 @@ class ModelKegiatanAdmin {
   final String kategori;
   final String deskripsi;
   final String? manualStatus; // 'Mendatang' atau 'Selesai'
+  final double? lat; // Koordinat titik lokasi di peta (opsional)
+  final double? lng;
+
+  bool get punyaKoordinat => lat != null && lng != null;
 
   ModelKegiatanAdmin({
     required this.id,
@@ -23,6 +28,8 @@ class ModelKegiatanAdmin {
     required this.kategori,
     required this.deskripsi,
     this.manualStatus,
+    this.lat,
+    this.lng,
   });
 
   // Status 'Mendatang' vs 'Selesai' (Mendahulukan manualStatus, fallback ke kalkulasi tanggal relatif)
@@ -70,6 +77,8 @@ class _HalamanFormKegiatanAdminState extends State<HalamanFormKegiatanAdmin> {
   late String _kategoriTerpilih;
   late String _statusTerpilih;
   late DateTime _tanggalObj;
+  double? _lat;
+  double? _lng;
 
   @override
   void initState() {
@@ -86,6 +95,8 @@ class _HalamanFormKegiatanAdminState extends State<HalamanFormKegiatanAdmin> {
     final kat = edit?.kategori ?? 'Sosial';
     _kategoriTerpilih = AppConstants.kDaftarKategoriUtama.contains(kat) ? kat : 'Sosial';
     _statusTerpilih = edit?.status ?? 'Mendatang';
+    _lat = edit?.lat;
+    _lng = edit?.lng;
   }
 
   @override
@@ -198,6 +209,8 @@ class _HalamanFormKegiatanAdminState extends State<HalamanFormKegiatanAdmin> {
         kategori: _kategoriTerpilih,
         deskripsi: _deskripsiController.text.trim(),
         manualStatus: _statusTerpilih,
+        lat: _lat,
+        lng: _lng,
       );
       widget.onSimpan(hasil);
       Navigator.pop(context);
@@ -339,6 +352,24 @@ class _HalamanFormKegiatanAdminState extends State<HalamanFormKegiatanAdmin> {
                         prefixIcon: Icons.location_on_outlined,
                       ),
                       validator: (val) => val == null || val.trim().isEmpty ? 'Lokasi wajib diisi' : null,
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Titik lokasi di peta (opsional)
+                    PemilihTitikPeta(
+                      lat: _lat,
+                      lng: _lng,
+                      kataKunciAwal: _lokasiController.text.trim(),
+                      onChanged: (hasil) {
+                        setState(() {
+                          _lat = hasil?.lat;
+                          _lng = hasil?.lng;
+                          // Isi kolom lokasi dari hasil pencarian jika masih kosong
+                          if (hasil?.alamat != null && _lokasiController.text.trim().isEmpty) {
+                            _lokasiController.text = hasil!.alamat!;
+                          }
+                        });
+                      },
                     ),
                     const SizedBox(height: 16),
 

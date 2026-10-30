@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
-import '../../autentikasi/halaman/halaman_login.dart';
+import '../../autentikasi/layanan/pengalihan_role.dart';
 
 // Navigation Drawer Interaktif Sesuai Usability & Mockup
 class AppDrawer extends StatelessWidget {
@@ -38,12 +38,11 @@ class AppDrawer extends StatelessWidget {
               foregroundColor: AppColors.textWhite,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const HalamanLogin()),
-              );
+            onPressed: () async {
+              final nav = Navigator.of(context);
+              nav.pop(); // Tutup dialog
+              await LayananAutentikasi.keluar();
+              nav.popUntil((route) => route.isFirst);
             },
             child: const Text('Keluar'),
           ),
@@ -77,7 +76,7 @@ class AppDrawer extends StatelessWidget {
             ),
           ),
 
-          // 2. Menu Utama (Beranda, Kegiatan, Jadwal, Anggota, Galeri)
+          // 2. Menu Utama (Beranda, Kegiatan, Usulan, Jadwal, Anggota, Galeri)
           Expanded(
             child: ListView(
               padding: EdgeInsets.zero,
@@ -96,21 +95,27 @@ class AppDrawer extends StatelessWidget {
                 ),
                 _buildMenuItem(
                   context: context,
+                  icon: Icons.lightbulb_outline,
+                  label: 'Usulan Kegiatan',
+                  index: 2,
+                ),
+                _buildMenuItem(
+                  context: context,
                   icon: Icons.calendar_month_outlined,
                   label: 'Jadwal',
-                  index: 2,
+                  index: 3,
                 ),
                 _buildMenuItem(
                   context: context,
                   icon: Icons.people_outline,
                   label: 'Anggota',
-                  index: 3,
+                  index: 4,
                 ),
                 _buildMenuItem(
                   context: context,
                   icon: Icons.photo_library_outlined,
                   label: 'Galeri',
-                  index: 4,
+                  index: 5,
                 ),
 
                 const Divider(height: 24, thickness: 1, color: AppColors.cardBorder),

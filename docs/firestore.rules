@@ -1,6 +1,6 @@
 // ==============================================================================
-// ARSIP FIRESTORE SECURITY RULES KARANGKITA
-// Status: AKTIF (Telah dipublish manual via Firebase Console pada proyek karangkita-d69d1)
+// FIRESTORE SECURITY RULES KARANGKITA (versi baru: Sekretaris, Bendahara, tamu, usulan, notifikasi)
+// Tempel manual di Firebase Console > Firestore Database > Rules, lalu klik Publish.
 // PERINGATAN: File ini hanya dokumentasi lokal. Jangan jalankan firebase deploy CLI.
 // ==============================================================================
 
@@ -17,9 +17,13 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
+    function isPengurusRole(r) {
+      return r in ['Pengurus', 'Ketua', 'Sekretaris', 'Bendahara', 'Admin'];
+    }
+
     function isApprovedAdmin() {
       return isAuth() &&
-        (getUserData().role == 'Pengurus' || getUserData().role == 'Ketua' || getUserData().role == 'Admin') &&
+        isPengurusRole(getUserData().role) &&
         getUserData().disetujui == true;
     }
 
@@ -41,8 +45,7 @@ service cloud.firestore {
         (
           request.auth.uid == userId &&
           (request.resource.data.role == 'Pengurus' || request.resource.data.role == 'Anggota' || request.resource.data.role == 'Warga') &&
-          (request.resource.data.role != 'Pengurus' || request.resource.data.disetujui == false) &&
-          (request.resource.data.role != 'Ketua' && request.resource.data.role != 'Admin')
+          (request.resource.data.role != 'Pengurus' || request.resource.data.disetujui == false)
         )
         ||
         (
@@ -56,12 +59,18 @@ service cloud.firestore {
       allow update: if isAuth() && request.auth.uid == userId &&
         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'disetujui']);
 
+      // A2. Serah terima: Ketua boleh menurunkan dirinya sendiri menjadi Pengurus
+      allow update: if isKetuaOrAdmin() && request.auth.uid == userId &&
+        resource.data.role == 'Ketua' &&
+        request.resource.data.role == 'Pengurus' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role']);
+
       // B. Pengurus Disetujui mengedit Anggota/Warga: HANYA BOLEH merubah 'nama' & 'whatsapp'
       allow update: if isApprovedAdmin() && request.auth.uid != userId &&
         (resource.data.role == 'Anggota' || resource.data.role == 'Warga') &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nama', 'whatsapp']);
 
-      // C. Ketua / Admin Utama: Boleh mengubah SELURUH field milik orang lain (DILARANG ubah role/disetujui sendiri)
+      // C. Ketua / Admin Utama: Boleh mengubah SELURUH field milik orang lain
       allow update: if isKetuaOrAdmin() && request.auth.uid != userId;
 
       // Hapus Akun (DELETE):
@@ -74,9 +83,9 @@ service cloud.firestore {
       );
     }
 
-    // 2. KOLEKSI 'kegiatan'
+    // 2. KOLEKSI 'kegiatan' (dibaca publik agar mode tamu tanpa login bisa melihat)
     match /kegiatan/{kegiatanId} {
-      allow read: if isAuth();
+      allow read: if true;
       allow create, update, delete: if isApprovedAdmin();
     }
 
@@ -90,6 +99,27 @@ service cloud.firestore {
     match /galeri/{galeriId} {
       allow read: if isAuth();
       allow create, update, delete: if isApprovedAdmin();
+    }
+
+    // 5. KOLEKSI 'usulan' (bottom-up: anggota mengusulkan, pengurus memutuskan)
+    match /usulan/{usulanId} {
+      allow read: if isAuth();
+      allow create: if isAuth() && request.resource.data.pengusulUid == request.auth.uid;
+      allow update: if isAuth() && (
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['dukungan']) ||
+        isApprovedAdmin() ||
+        (resource.data.pengusulUid == request.auth.uid && resource.data.status == 'Menunggu')
+      );
+      allow delete: if isApprovedAdmin() ||
+        (isAuth() && resource.data.pengusulUid == request.auth.uid && resource.data.status == 'Menunggu');
+    }
+
+    // 6. KOLEKSI 'notifikasi' (notifikasi dalam aplikasi)
+    match /notifikasi/{notifId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['dibacaOleh']);
     }
   }
 }

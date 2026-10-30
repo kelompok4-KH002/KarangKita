@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/app_constants.dart';
 import '../layanan/pengalihan_role.dart';
 import 'halaman_login.dart';
 
@@ -59,7 +60,7 @@ class _HalamanRegistrasiState extends State<HalamanRegistrasi> {
     if (hasil.sukses) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Registrasi berhasil! Silakan login dengan username: ${_usernameController.text.trim()}'),
+          content: Text(hasil.pesan),
           backgroundColor: const Color(0xFF1E3A8A),
         ),
       );
@@ -157,7 +158,8 @@ class _HalamanRegistrasiState extends State<HalamanRegistrasi> {
                       ),
                       const SizedBox(height: 4),
                       const Text(
-                        'Pilih peran dan lengkapi data untuk mulai',
+                        'Pilih peran dan lengkapi data untuk mulai. Jabatan Ketua, Sekretaris, dan Bendahara ditetapkan oleh Ketua.',
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 13,
                           color: Color(0xFF64748B),
@@ -187,7 +189,7 @@ class _HalamanRegistrasiState extends State<HalamanRegistrasi> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Row(
-                              children: ['Pengurus', 'Anggota', 'Warga'].map((peran) {
+                              children: AppConstants.kPeranRegistrasi.map((peran) {
                                 final isSelected = _peranTerpilih == peran;
                                 return Expanded(
                                   child: GestureDetector(

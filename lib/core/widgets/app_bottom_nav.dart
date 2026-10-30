@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
-// Bottom Navigation Bar 5 Tab Sesuai Mockup
+// Bottom Navigation Bar 6 Tab (Beranda, Kegiatan, Usulan, Jadwal, Anggota, Galeri)
 class AppBottomNav extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
@@ -21,8 +21,8 @@ class AppBottomNav extends StatelessWidget {
       backgroundColor: AppColors.surface,
       selectedItemColor: AppColors.primary,
       unselectedItemColor: AppColors.textSecondary,
-      selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
-      unselectedLabelStyle: const TextStyle(fontSize: 11),
+      selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
+      unselectedLabelStyle: const TextStyle(fontSize: 10),
       items: const [
         BottomNavigationBarItem(
           icon: Icon(Icons.home_filled),
@@ -31,6 +31,10 @@ class AppBottomNav extends StatelessWidget {
         BottomNavigationBarItem(
           icon: Icon(Icons.event_note_outlined),
           label: 'Kegiatan',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.lightbulb_outline),
+          label: 'Usulan',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.calendar_month_outlined),

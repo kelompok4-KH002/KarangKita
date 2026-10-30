@@ -18,22 +18,28 @@ class CategoryChip extends StatelessWidget {
 
       case 'Sosial':
       case 'Anggota':
+      case 'Disetujui':
         return AppColors.badgeGreenBg;
 
       case 'Olahraga':
       case 'Menunggu persetujuan':
+      case 'Menunggu':
         return AppColors.badgeOrangeBg;
 
       case 'Edukasi':
+      case 'Sekretaris':
         return AppColors.badgePurpleBg;
 
       case 'Kerja Bakti':
-      case 'Warga':
+      case 'Bendahara':
         return AppColors.badgeTealBg;
 
       case 'Acara':
       case 'Ketua':
         return AppColors.badgeIndigoBg;
+
+      case 'Ditolak':
+        return AppColors.dangerBg;
 
       default:
         return AppColors.badgeNeutralBg; // Fallback netral jika tidak terdaftar
@@ -48,22 +54,28 @@ class CategoryChip extends StatelessWidget {
 
       case 'Sosial':
       case 'Anggota':
+      case 'Disetujui':
         return AppColors.badgeGreenText;
 
       case 'Olahraga':
       case 'Menunggu persetujuan':
+      case 'Menunggu':
         return AppColors.badgeOrangeText;
 
       case 'Edukasi':
+      case 'Sekretaris':
         return AppColors.badgePurpleText;
 
       case 'Kerja Bakti':
-      case 'Warga':
+      case 'Bendahara':
         return AppColors.badgeTealText;
 
       case 'Acara':
       case 'Ketua':
         return AppColors.badgeIndigoText;
+
+      case 'Ditolak':
+        return AppColors.danger;
 
       default:
         return AppColors.badgeNeutralText; // Fallback netral jika tidak terdaftar

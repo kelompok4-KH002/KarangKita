@@ -6,6 +6,7 @@ import '../../../core/theme/app_constants.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/category_chip.dart';
 import '../../../autentikasi/layanan/pengalihan_role.dart';
+import '../../../notifikasi/layanan/layanan_notifikasi.dart';
 
 // Model Data Anggota Admin
 class ModelAnggotaAdmin {
@@ -88,7 +89,7 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
       for (var doc in snap.docs) {
         final data = doc.data();
         final docId = doc.id;
-        final userRole = data['role'] ?? 'Anggota';
+        final userRole = AppConstants.normalisasiPeran(data['role']);
         
         if (docId == _currentUserId) {
           _currentUserRole = userRole;
@@ -122,7 +123,15 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
     }
   }
 
-  bool get _isKetuaOrAdmin => _currentUserRole == 'Ketua' || _currentUserRole == 'Admin';
+  bool get _isKetuaOrAdmin => AppConstants.bolehKelolaKeanggotaan(_currentUserRole);
+
+  // Pemegang jabatan inti (Ketua/Sekretaris/Bendahara) selain [kecualiId], null jika kosong
+  ModelAnggotaAdmin? _pemegangJabatan(String jabatan, {String? kecualiId}) {
+    for (final a in _daftarAnggota) {
+      if (a.jabatan == jabatan && a.id != kecualiId && a.disetujui) return a;
+    }
+    return null;
+  }
 
   List<ModelAnggotaAdmin> _getFiltered() {
     final query = _searchController.text.toLowerCase().trim();
@@ -144,6 +153,7 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
           whatsapp: item.whatsapp,
           password: updatePayload['password'] ?? '123456',
           peranString: item.jabatan,
+          pertahankanSesi: true,
         );
 
         if (!res.sukses) {
@@ -168,11 +178,117 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
         return;
       }
 
+      // Validasi jabatan inti pada mode Edit (hanya Ketua yang boleh mengubah peran)
+      String? jabatanLama;
+      if (isEdit && _isKetuaOrAdmin) {
+        for (final a in _daftarAnggota) {
+          if (a.id == item.id) jabatanLama = a.jabatan;
+        }
+        final berubah = jabatanLama != null && jabatanLama != item.jabatan;
+
+        // Ketua tidak boleh melepas jabatannya sendiri tanpa penerus
+        if (berubah && item.id == _currentUserId && jabatanLama == 'Ketua') {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Untuk melepas jabatan Ketua, tetapkan anggota lain sebagai Ketua lewat tombol edit anggota tersebut.'),
+              backgroundColor: AppColors.danger,
+            ),
+          );
+          return;
+        }
+
+        if (berubah && AppConstants.kJabatanInti.contains(item.jabatan)) {
+          final pemegang = _pemegangJabatan(item.jabatan, kecualiId: item.id);
+
+          if (pemegang != null) {
+            final serahTerimaKetua = item.jabatan == 'Ketua' && pemegang.id == _currentUserId;
+            if (!serahTerimaKetua) {
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Jabatan ${item.jabatan} sedang dijabat ${pemegang.nama}. Ubah jabatan ${pemegang.nama} terlebih dahulu.',
+                  ),
+                  backgroundColor: AppColors.danger,
+                ),
+              );
+              return;
+            }
+
+            // Serah terima Ketua: Ketua sekarang turun menjadi Pengurus
+            if (!mounted) return;
+            final lanjut = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: AppRadius.r16),
+                title: const Text('Serahkan jabatan Ketua?', style: TextStyle(fontWeight: FontWeight.bold)),
+                content: Text(
+                  'Jabatan Ketua akan diberikan kepada ${item.nama}. Anda akan menjadi Pengurus dan tidak lagi bisa mengelola keanggotaan.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Batal', style: TextStyle(color: AppColors.textSecondary)),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.textWhite,
+                    ),
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Serahkan'),
+                  ),
+                ],
+              ),
+            );
+            if (lanjut != true) return;
+
+            // Tulis keduanya sekaligus agar tidak ada kondisi dua Ketua / tanpa Ketua
+            final db = FirebaseFirestore.instance;
+            final batch = db.batch();
+            batch.set(db.collection('users').doc(item.id), updatePayload, SetOptions(merge: true));
+            batch.set(db.collection('users').doc(pemegang.id), {'role': 'Pengurus'}, SetOptions(merge: true));
+            await batch.commit();
+
+            await LayananNotifikasi.kirim(
+              penerima: [LayananNotifikasi.keUid(item.id)],
+              judul: 'Anda ditetapkan sebagai Ketua',
+              isi: '${pemegang.nama} menyerahkan jabatan Ketua kepada Anda.',
+              tipe: 'jabatan',
+            );
+            await LayananNotifikasi.kirim(
+              penerima: [LayananNotifikasi.keUid(pemegang.id)],
+              judul: 'Jabatan Anda berubah',
+              isi: 'Anda kini menjabat sebagai Pengurus.',
+              tipe: 'jabatan',
+            );
+
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Jabatan Ketua diserahkan kepada ${item.nama}')),
+            );
+            _muatUserFirestore();
+            return;
+          }
+        }
+      }
+
       // 1. Tulis ke Firestore DULU (untuk mode Edit)
       await FirebaseFirestore.instance
           .collection('users')
           .doc(item.id)
           .set(updatePayload, SetOptions(merge: true));
+
+      // Notifikasi keanggotaan jika jabatan berubah
+      if (isEdit && jabatanLama != null && jabatanLama != item.jabatan) {
+        await LayananNotifikasi.kirim(
+          penerima: [LayananNotifikasi.keUid(item.id)],
+          judul: 'Jabatan Anda berubah',
+          isi: 'Jabatan Anda kini: ${item.jabatan}.',
+          tipe: 'jabatan',
+        );
+      }
 
       // 2. Jika Firestore BERHASIL, perbarui list lokal
       final currentList = List<ModelAnggotaAdmin>.from(_daftarAnggota);
@@ -204,6 +320,13 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
       await FirebaseFirestore.instance.collection('users').doc(item.id).update({
         'disetujui': true,
       });
+
+      await LayananNotifikasi.kirim(
+        penerima: [LayananNotifikasi.keUid(item.id)],
+        judul: 'Akun Anda disetujui',
+        isi: 'Pendaftaran Anda sebagai ${item.jabatan} telah disetujui. Silakan masuk ke aplikasi.',
+        tipe: 'anggota',
+      );
 
       final updated = ModelAnggotaAdmin(
         id: item.id,
@@ -381,13 +504,12 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
                           style: AppTextStyles.statLabel,
                         ),
                       )
-                    : ListView.builder(
+                    : ListView(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                        itemCount: listFiltered.length,
-                        itemBuilder: (context, index) {
-                          final item = listFiltered[index];
-                          return _buildMemberCard(item);
-                        },
+                        children: [
+                          if (_searchController.text.trim().isEmpty) _buildStrukturPengurus(),
+                          ...listFiltered.map(_buildMemberCard),
+                        ],
                       ),
           ),
         ],
@@ -401,12 +523,92 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
     );
   }
 
+  // Kartu struktur pengurus inti: Ketua, Sekretaris, Bendahara
+  Widget _buildStrukturPengurus() {
+    const ikon = {
+      'Ketua': Icons.workspace_premium_outlined,
+      'Sekretaris': Icons.edit_note_outlined,
+      'Bendahara': Icons.account_balance_wallet_outlined,
+    };
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppRadius.r16,
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Struktur Pengurus', style: AppTextStyles.sectionTitle),
+          const SizedBox(height: 10),
+          ...AppConstants.kJabatanInti.map((jabatan) {
+            final pemegang = _pemegangJabatan(jabatan);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: InkWell(
+                borderRadius: AppRadius.r10,
+                onTap: pemegang != null ? () => _bukaModalForm(pemegang) : null,
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: AppRadius.r10,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: AppColors.primaryLight,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(ikon[jabatan], size: 18, color: AppColors.primary),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(jabatan, style: AppTextStyles.cardSubtitle),
+                            const SizedBox(height: 2),
+                            Text(
+                              pemegang?.nama ?? 'Belum ditetapkan',
+                              style: pemegang != null
+                                  ? AppTextStyles.cardTitle
+                                  : AppTextStyles.cardSubtitle.copyWith(fontStyle: FontStyle.italic),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (pemegang != null)
+                        Text(pemegang.whatsapp, style: AppTextStyles.cardSubtitle),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
+          const SizedBox(height: 4),
+          Text(
+            _isKetuaOrAdmin
+                ? 'Ketua dapat menetapkan jabatan lewat tombol edit pada daftar anggota.'
+                : 'Jabatan inti ditetapkan oleh Ketua.',
+            style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMemberCard(ModelAnggotaAdmin item) {
     // Tombol Hapus X hanya tampil jika diperbolehkan:
     // - Ketua/Admin: untuk semua akun selain dirinya
-    // - Pengurus: hanya untuk akun Anggota atau Warga
+    // - Pengurus (Sekretaris/Bendahara/Pengurus): hanya untuk akun Anggota
     final bool bolehHapus = item.id != _currentUserId &&
-        (_isKetuaOrAdmin || item.jabatan == 'Anggota' || item.jabatan == 'Warga');
+        (_isKetuaOrAdmin || item.jabatan == 'Anggota');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -542,10 +744,10 @@ class _DialogTambahEditAnggotaState extends State<DialogTambahEditAnggota> {
     final isPendingAcc = editPendingAcc(widget.anggotaEdit);
 
     // Opsi Dropdown Peran:
-    // - Mode TAMBAH Anggota: HANYA 'Anggota' dan 'Warga'
-    // - Mode EDIT (oleh Ketua/Admin): Pilihan lengkap ['Ketua', 'Pengurus', 'Anggota', 'Warga']
+    // - Mode TAMBAH: hanya 'Anggota' (jabatan ditetapkan Ketua lewat Edit setelah akun dibuat)
+    // - Mode EDIT (oleh Ketua/Admin): Pilihan lengkap (Ketua, Sekretaris, Bendahara, Pengurus, Anggota)
     final List<String> daftarPilihanPeran = !isEdit
-        ? ['Anggota', 'Warga']
+        ? ['Anggota']
         : widget.isKetuaOrAdmin
             ? AppConstants.kDaftarPeranUtama
             : [_peranTerpilih];

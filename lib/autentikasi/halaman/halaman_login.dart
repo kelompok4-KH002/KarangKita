@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../komponen/komponen_autentikasi.dart';
 import '../layanan/pengalihan_role.dart';
 import 'halaman_registrasi.dart';
-import '../../kegiatan/admin/halaman/halaman_beranda_admin.dart';
 
 // Halaman Login utama aplikasi (High-Fidelity)
 class HalamanLogin extends StatefulWidget {
@@ -52,11 +51,8 @@ class _HalamanLoginState extends State<HalamanLogin> {
 
     if (hasil.sukses) {
       if (!mounted) return;
-      // Berpindah ke beranda admin jika login sukses
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HalamanBerandaAdmin()),
-      );
+      // Gerbang di main.dart otomatis menampilkan beranda sesuai sesi login
+      Navigator.of(context).popUntil((route) => route.isFirst);
     } else {
       setState(() {
         _errorMessage = hasil.pesan;
@@ -151,6 +147,12 @@ class _HalamanLoginState extends State<HalamanLogin> {
                     isLoading: _isLoading,
                   ),
                   const SizedBox(height: 24),
+
+                  TextButton(
+                    onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
+                    child: const Text('Lihat sebagai Tamu'),
+                  ),
+                  const SizedBox(height: 8),
 
                   // Footer Link ke Registrasi
                   Row(
