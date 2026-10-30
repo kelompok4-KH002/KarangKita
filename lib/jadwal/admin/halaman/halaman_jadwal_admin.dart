@@ -53,12 +53,19 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
       final List<ModelJadwalAdmin> listDariCloud = [];
       for (var doc in snap.docs) {
         final data = doc.data();
+        final rawWaktu = data['waktu'] ?? data['jam'] ?? '19:30 WIB';
+        final wktMulai = data['waktuMulai'] ?? (rawWaktu.contains('-') ? rawWaktu.split('-')[0].trim() : rawWaktu);
+        final wktSelesai = data['waktuSelesai'] ?? (rawWaktu.contains('-') ? rawWaktu.split('-')[1].trim() : '21:00 WIB');
+
         listDariCloud.add(ModelJadwalAdmin(
           id: data['id'] ?? doc.id,
           judul: data['judul'] ?? '',
+          targetPeserta: data['targetPeserta'] ?? 'Pengurus',
           tanggal: DateTime.tryParse(data['tanggal'] ?? '') ?? DateTime.now(),
-          jam: data['waktu'] ?? data['jam'] ?? '19:30 WIB',
+          waktuMulai: wktMulai,
+          waktuSelesai: wktSelesai,
           lokasi: data['lokasi'] ?? '',
+          catatan: data['catatan'] ?? data['deskripsi'] ?? '',
           kategori: data['kategori'] ?? 'Rapat',
         ));
       }
@@ -86,11 +93,15 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
       await FirebaseFirestore.instance.collection('kegiatan').doc(jadwal.id).set({
         'id': jadwal.id,
         'judul': jadwal.judul,
-        'waktu': jadwal.jam,
+        'targetPeserta': jadwal.targetPeserta,
+        'waktu': '${jadwal.waktuMulai} - ${jadwal.waktuSelesai}',
+        'waktuMulai': jadwal.waktuMulai,
+        'waktuSelesai': jadwal.waktuSelesai,
         'lokasi': jadwal.lokasi,
+        'catatan': jadwal.catatan,
+        'deskripsi': jadwal.catatan,
         'kategori': jadwal.kategori,
         'tanggal': jadwal.tanggal.toIso8601String(),
-        'deskripsi': '',
       }, SetOptions(merge: true));
 
       setState(() {
@@ -114,8 +125,13 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
       await FirebaseFirestore.instance.collection('kegiatan').doc(jadwal.id).set({
         'id': jadwal.id,
         'judul': jadwal.judul,
-        'waktu': jadwal.jam,
+        'targetPeserta': jadwal.targetPeserta,
+        'waktu': '${jadwal.waktuMulai} - ${jadwal.waktuSelesai}',
+        'waktuMulai': jadwal.waktuMulai,
+        'waktuSelesai': jadwal.waktuSelesai,
         'lokasi': jadwal.lokasi,
+        'catatan': jadwal.catatan,
+        'deskripsi': jadwal.catatan,
         'kategori': jadwal.kategori,
         'tanggal': jadwal.tanggal.toIso8601String(),
       }, SetOptions(merge: true));
@@ -156,6 +172,25 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
         SnackBar(content: Text(_getPesanErrorHapus(e)), backgroundColor: AppColors.danger),
       );
     }
+  }
+
+  void _bukaHalamanFormJadwal({ModelJadwalAdmin? jadwalEdit, int? origIndex}) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => HalamanFormJadwalAdmin(
+          jadwalEdit: jadwalEdit,
+          onSimpan: (newItem) {
+            if (jadwalEdit != null && origIndex != null) {
+              _editJadwal(origIndex, newItem);
+            } else {
+              _tambahJadwal(newItem);
+            }
+          },
+          onHapus: origIndex != null ? () => _hapusJadwal(origIndex) : null,
+        ),
+      ),
+    );
   }
 
   @override
@@ -362,6 +397,26 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primaryLight,
+                                          borderRadius: AppRadius.r6,
+                                        ),
+                                        child: Text(
+                                          item.targetPeserta.toUpperCase(),
+                                          style: const TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.primary,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
                                   Text(
                                     item.judul,
                                     style: AppTextStyles.cardTitle,
@@ -379,16 +434,10 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
 
                             IconButton(
                               icon: const Icon(Icons.edit_outlined, size: 20, color: AppColors.primary),
-                              onPressed: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (context) => DialogTambahEditJadwalAdmin(
-                                    jadwalEdit: item,
-                                    onSimpan: (newItem) => _editJadwal(origIndex, newItem),
-                                    onHapus: () => _hapusJadwal(origIndex),
-                                  ),
-                                );
-                              },
+                              onPressed: () => _bukaHalamanFormJadwal(
+                                jadwalEdit: item,
+                                origIndex: origIndex,
+                              ),
                             ),
                             IconButton(
                               icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.primary),
@@ -413,12 +462,7 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
                     borderRadius: AppRadius.r12,
                   ),
                 ),
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => DialogTambahEditJadwalAdmin(onSimpan: _tambahJadwal),
-                  );
-                },
+                onPressed: () => _bukaHalamanFormJadwal(),
                 child: const Text('Tambah jadwal', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),

@@ -26,6 +26,14 @@ class HeroCard extends StatelessWidget {
     final stringHari = namaHari[(tanggal.weekday - 1) % 7];
     final stringTanggal = '$stringHari, ${tanggal.day} ${namaBulan[tanggal.month]} ${tanggal.year}';
 
+    final String greetingText = (namaPengguna.isNotEmpty && namaPengguna != 'Admin KarangKita')
+        ? 'Halo, $namaPengguna!'
+        : 'Halo, $peran!';
+
+    final String pillText = (peran.isNotEmpty && peran != 'Karang Taruna Digital')
+        ? peran
+        : 'Karang Taruna Digital';
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20.0),
@@ -67,8 +75,8 @@ class HeroCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 6),
-                      const Text(
-                        'Karang Taruna Digital',
+                      Text(
+                        pillText,
                         style: AppTextStyles.heroPill,
                       ),
                     ],
@@ -78,7 +86,7 @@ class HeroCard extends StatelessWidget {
 
                 // Greeting
                 Text(
-                  'Halo, $peran!',
+                  greetingText,
                   style: AppTextStyles.heroGreeting,
                 ),
                 const SizedBox(height: 4),

@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_constants.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/category_chip.dart';
+import '../../../autentikasi/layanan/pengalihan_role.dart';
 
 // Model Data Anggota Admin
 class ModelAnggotaAdmin {
@@ -23,7 +24,7 @@ class ModelAnggotaAdmin {
   });
 }
 
-// Halaman Kelola Anggota Admin High-Fidelity Sesuai Mockup Figma (`admin_pengurus_kelola_anggota.png`)
+// Halaman Kelola Anggota Admin
 class HalamanAnggotaAdmin extends StatefulWidget {
   const HalamanAnggotaAdmin({super.key});
 
@@ -135,7 +136,39 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
 
   void _simpanAnggota(ModelAnggotaAdmin item, bool isEdit, Map<String, dynamic> updatePayload) async {
     try {
-      // 1. Tulis ke Firestore DULU
+      if (!isEdit && updatePayload.containsKey('username') && updatePayload.containsKey('password')) {
+        // Buat akun Auth + Firestore via LayananAutentikasi
+        final res = await LayananAutentikasi.daftar(
+          nama: item.nama,
+          username: updatePayload['username'] ?? '',
+          whatsapp: item.whatsapp,
+          password: updatePayload['password'] ?? '123456',
+          peranString: item.jabatan,
+        );
+
+        if (!res.sukses) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(res.pesan), backgroundColor: AppColors.danger),
+          );
+          return;
+        }
+
+        // Tampilkan pesan sukses dengan kredensial baru
+        if (!mounted) return;
+        final u = updatePayload['username'];
+        final p = updatePayload['password'];
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Akun "${item.nama}" berhasil dibuat!\nUsername: $u | Password: $p'),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+        _muatUserFirestore();
+        return;
+      }
+
+      // 1. Tulis ke Firestore DULU (untuk mode Edit)
       await FirebaseFirestore.instance
           .collection('users')
           .doc(item.id)
@@ -475,6 +508,8 @@ class _DialogTambahEditAnggotaState extends State<DialogTambahEditAnggota> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _namaController;
   late TextEditingController _whatsappController;
+  late TextEditingController _usernameController;
+  late TextEditingController _passwordController;
   late String _peranTerpilih;
   bool _prosesSimpan = false;
 
@@ -484,6 +519,8 @@ class _DialogTambahEditAnggotaState extends State<DialogTambahEditAnggota> {
     final edit = widget.anggotaEdit;
     _namaController = TextEditingController(text: edit?.nama ?? '');
     _whatsappController = TextEditingController(text: edit?.whatsapp ?? '');
+    _usernameController = TextEditingController();
+    _passwordController = TextEditingController(text: '123456');
 
     // Pertahankan peran awal anggota persis apa adanya saat edit
     final peranAwal = edit?.jabatan ?? 'Anggota';
@@ -494,6 +531,8 @@ class _DialogTambahEditAnggotaState extends State<DialogTambahEditAnggota> {
   void dispose() {
     _namaController.dispose();
     _whatsappController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -552,11 +591,38 @@ class _DialogTambahEditAnggotaState extends State<DialogTambahEditAnggota> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Info Banner untuk Tambah Baru
+                      if (!isEdit) ...[
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryLight,
+                            borderRadius: AppRadius.r10,
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.info_outline, size: 18, color: AppColors.primary),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Akun login akan otomatis dibuatkan dan langsung aktif untuk login.',
+                                  style: TextStyle(fontSize: 11, color: AppColors.primary),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                      ],
+
                       // Nama Lengkap
                       _buildInputLabel('Nama Lengkap'),
                       TextFormField(
                         controller: _namaController,
-                        decoration: _buildInputDecoration(hintText: 'Nama lengkap anggota'),
+                        decoration: _buildInputDecoration(
+                          hintText: 'Nama lengkap anggota',
+                          prefixIcon: Icons.person_outline,
+                        ),
                         validator: (val) {
                           if (val == null || val.trim().isEmpty) {
                             return 'Nama lengkap wajib diisi';
@@ -565,6 +631,48 @@ class _DialogTambahEditAnggotaState extends State<DialogTambahEditAnggota> {
                         },
                       ),
                       const SizedBox(height: 14),
+
+                      // Username & Password (Hanya untuk Tambah Baru)
+                      if (!isEdit) ...[
+                        _buildInputLabel('Username Login'),
+                        TextFormField(
+                          controller: _usernameController,
+                          decoration: _buildInputDecoration(
+                            hintText: 'Contoh: budi123',
+                            prefixIcon: Icons.account_circle_outlined,
+                          ),
+                          validator: (val) {
+                            if (val == null || val.trim().isEmpty) {
+                              return 'Username login wajib diisi';
+                            }
+                            if (val.trim().contains(' ')) {
+                              return 'Username tidak boleh mengandung spasi';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 14),
+
+                        _buildInputLabel('Password Login'),
+                        TextFormField(
+                          controller: _passwordController,
+                          obscureText: true,
+                          decoration: _buildInputDecoration(
+                            hintText: 'Min. 6 Karakter (Default: 123456)',
+                            prefixIcon: Icons.lock_outline,
+                          ),
+                          validator: (val) {
+                            if (val == null || val.trim().isEmpty) {
+                              return 'Password wajib diisi';
+                            }
+                            if (val.trim().length < 6) {
+                              return 'Password minimal 6 karakter';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 14),
+                      ],
 
                       // Peran / Jabatan
                       _buildInputLabel('Peran / Jabatan'),
@@ -673,7 +781,6 @@ class _DialogTambahEditAnggotaState extends State<DialogTambahEditAnggota> {
                               final waNew = _whatsappController.text.trim();
 
                               // Konstruksi Payload Presisi:
-                              // Jika Pengurus mengedit, HANYA kirim 'nama' dan 'whatsapp' jika role/disetujui tidak diubah!
                               final Map<String, dynamic> updatePayload = {
                                 'nama': namaNew,
                                 'whatsapp': waNew,
@@ -683,6 +790,8 @@ class _DialogTambahEditAnggotaState extends State<DialogTambahEditAnggota> {
                                 updatePayload['uid'] = DateTime.now().millisecondsSinceEpoch.toString();
                                 updatePayload['role'] = _peranTerpilih;
                                 updatePayload['disetujui'] = true;
+                                updatePayload['username'] = _usernameController.text.trim().toLowerCase();
+                                updatePayload['password'] = _passwordController.text.trim();
                               } else if (widget.isKetuaOrAdmin) {
                                 // Ketua/Admin yang mengubah peran
                                 updatePayload['role'] = _peranTerpilih;

@@ -45,6 +45,7 @@ class AppColors {
 
 // Design Tokens Border Radius Terpusat
 class AppRadius {
+  static const BorderRadius r6 = BorderRadius.all(Radius.circular(6));
   static const BorderRadius r8 = BorderRadius.all(Radius.circular(8));
   static const BorderRadius r10 = BorderRadius.all(Radius.circular(10));
   static const BorderRadius r12 = BorderRadius.all(Radius.circular(12));

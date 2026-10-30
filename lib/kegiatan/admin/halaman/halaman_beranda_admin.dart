@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -31,13 +32,51 @@ class HalamanBerandaAdmin extends StatefulWidget {
 
 class _HalamanBerandaAdminState extends State<HalamanBerandaAdmin> {
   int _currentIndex = 0;
+  String _namaPenggunaReal = '';
+  String _peranReal = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _namaPenggunaReal = widget.namaPengguna;
+    _peranReal = widget.peran;
+    _muatProfilUserRealtime();
+  }
+
+  // Muat data profil user yang sedang login murni secara real-time dari Cloud Firestore
+  void _muatProfilUserRealtime() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        final namaCloud = data['nama'] ?? '';
+        final roleCloud = data['role'] ?? data['jabatan'] ?? '';
+
+        if (mounted) {
+          setState(() {
+            if (namaCloud.toString().trim().isNotEmpty) {
+              _namaPenggunaReal = namaCloud.toString().trim();
+            }
+            if (roleCloud.toString().trim().isNotEmpty) {
+              _peranReal = roleCloud.toString().trim();
+            }
+          });
+        }
+      }
+    } catch (e) {
+      // Biarkan mengunakan nilai fallback jika gagal
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final List<Widget> pages = [
       _BerandaTabContent(
-        namaPengguna: widget.namaPengguna,
-        peran: widget.peran,
+        namaPengguna: _namaPenggunaReal,
+        peran: _peranReal,
         onPindahTab: (idx) {
           setState(() {
             _currentIndex = idx;
@@ -54,6 +93,8 @@ class _HalamanBerandaAdminState extends State<HalamanBerandaAdmin> {
       appBar: const AppHeader(title: 'KarangKita'),
       drawer: AppDrawer(
         activeIndex: _currentIndex,
+        namaPengguna: _namaPenggunaReal,
+        peran: _peranReal,
         onSelectTab: (index) {
           setState(() {
             _currentIndex = index;

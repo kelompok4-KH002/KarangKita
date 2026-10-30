@@ -58,6 +58,7 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
           lokasi: data['lokasi'] ?? '',
           kategori: data['kategori'] ?? 'Sosial',
           deskripsi: data['deskripsi'] ?? '',
+          manualStatus: data['status'],
         ));
       }
       if (mounted) {
@@ -88,6 +89,7 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
         'lokasi': kegiatan.lokasi,
         'kategori': kegiatan.kategori,
         'deskripsi': kegiatan.deskripsi,
+        'status': kegiatan.status,
         'tanggal': kegiatan.tanggal.toIso8601String(),
       }, SetOptions(merge: true));
 
@@ -116,6 +118,7 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
         'lokasi': kegiatan.lokasi,
         'kategori': kegiatan.kategori,
         'deskripsi': kegiatan.deskripsi,
+        'status': kegiatan.status,
         'tanggal': kegiatan.tanggal.toIso8601String(),
       }, SetOptions(merge: true));
 
@@ -155,6 +158,25 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
         SnackBar(content: Text(_getPesanErrorHapus(e)), backgroundColor: AppColors.danger),
       );
     }
+  }
+
+  void _bukaHalamanFormKegiatan({ModelKegiatanAdmin? kegiatanEdit, int? origIndex}) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => HalamanFormKegiatanAdmin(
+          kegiatanEdit: kegiatanEdit,
+          onSimpan: (newItem) {
+            if (kegiatanEdit != null && origIndex != null) {
+              _editKegiatan(origIndex, newItem);
+            } else {
+              _tambahKegiatan(newItem);
+            }
+          },
+          onHapus: origIndex != null ? () => _hapusKegiatan(origIndex) : null,
+        ),
+      ),
+    );
   }
 
   IconData _getKategoriIcon(String kategori) {
@@ -213,7 +235,7 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
               title: 'Kegiatan Mendatang',
               count: listMendatang.length,
               tag: 'Agenda Aktif',
-              dotColor: Colors.blueAccent,
+              dotColor: AppColors.primary,
             ),
             const SizedBox(height: 12),
 
@@ -228,7 +250,10 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
                       final origIndex = _daftarKegiatan.indexOf(item);
                       return _buildKegiatanCard(
                         item: item,
-                        onEdit: () => _bukaDialogEdit(item, origIndex),
+                        onEdit: () => _bukaHalamanFormKegiatan(
+                          kegiatanEdit: item,
+                          origIndex: origIndex,
+                        ),
                         onHapus: () => _hapusKegiatan(origIndex),
                       );
                     },
@@ -240,7 +265,7 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
               title: 'Kegiatan Selesai',
               count: listSelesai.length,
               tag: 'Arsip',
-              dotColor: Colors.green,
+              dotColor: AppColors.badgeGreenText,
             ),
             const SizedBox(height: 12),
 
@@ -255,7 +280,10 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
                       final origIndex = _daftarKegiatan.indexOf(item);
                       return _buildKegiatanCard(
                         item: item,
-                        onEdit: () => _bukaDialogEdit(item, origIndex),
+                        onEdit: () => _bukaHalamanFormKegiatan(
+                          kegiatanEdit: item,
+                          origIndex: origIndex,
+                        ),
                         onHapus: () => _hapusKegiatan(origIndex),
                       );
                     },
@@ -265,28 +293,10 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          showDialog(
-            context: context,
-            builder: (context) => DialogTambahEditKegiatan(
-              onSimpan: _tambahKegiatan,
-            ),
-          );
-        },
+        onPressed: () => _bukaHalamanFormKegiatan(),
         backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
+        foregroundColor: AppColors.textWhite,
         child: const Icon(Icons.add),
-      ),
-    );
-  }
-
-  void _bukaDialogEdit(ModelKegiatanAdmin item, int origIndex) {
-    showDialog(
-      context: context,
-      builder: (context) => DialogTambahEditKegiatan(
-        kegiatanEdit: item,
-        onSimpan: (newItem) => _editKegiatan(origIndex, newItem),
-        onHapus: () => _hapusKegiatan(origIndex),
       ),
     );
   }
@@ -307,14 +317,14 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
         const SizedBox(width: 8),
         Text(
           title,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+          style: AppTextStyles.sectionTitle,
         ),
         const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(
-            color: const Color(0xFFEEF2FF),
-            borderRadius: BorderRadius.circular(12),
+            color: AppColors.primaryLight,
+            borderRadius: AppRadius.r12,
           ),
           child: Text(
             '$count',
@@ -324,7 +334,7 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
         const Spacer(),
         Text(
           tag,
-          style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+          style: AppTextStyles.cardSubtitle,
         ),
       ],
     );
@@ -342,15 +352,8 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadius.r16,
         border: Border.all(color: AppColors.cardBorder),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -363,7 +366,7 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: isSelesai ? AppColors.badgeGreenBg : AppColors.badgeBlueBg,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: AppRadius.r6,
                 ),
                 child: Text(
                   isSelesai ? 'Selesai' : 'Mendatang',
@@ -381,7 +384,7 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: AppColors.badgeGreenBg,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: AppRadius.r6,
                 ),
                 child: Text(
                   item.kategori,
@@ -395,9 +398,13 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
               const SizedBox(width: 6),
 
               // Subtext Location
-              Text(
-                '• ${item.lokasi}',
-                style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+              Expanded(
+                child: Text(
+                  '• ${item.lokasi}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.cardSubtitle,
+                ),
               ),
             ],
           ),
@@ -409,8 +416,8 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
             children: [
               Container(
                 padding: const EdgeInsets.all(10),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFEEF2FF),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -427,19 +434,12 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
                   children: [
                     Text(
                       item.judul,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
+                      style: AppTextStyles.cardTitle,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '${item.tanggal.day} ${_getNamaBulan(item.tanggal.month)} ${item.tanggal.year} • ${item.lokasi}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                      ),
+                      style: AppTextStyles.cardSubtitle,
                     ),
                   ],
                 ),
@@ -452,30 +452,30 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              // Light Red Box Delete Button
+              // Delete Button
               InkWell(
                 onTap: onHapus,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: AppRadius.r8,
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(8),
+                    color: AppColors.danger.withOpacity(0.1),
+                    borderRadius: AppRadius.r8,
                   ),
                   child: const Icon(Icons.close_rounded, size: 18, color: AppColors.danger),
                 ),
               ),
               const SizedBox(width: 8),
 
-              // Light Blue Edit Button
+              // Edit Button
               InkWell(
                 onTap: onEdit,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: AppRadius.r8,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEEF2FF),
-                    borderRadius: BorderRadius.circular(8),
+                    color: AppColors.primaryLight,
+                    borderRadius: AppRadius.r8,
                   ),
                   child: Row(
                     children: [
@@ -504,7 +504,7 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 20),
-        child: Text(msg, style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
+        child: Text(msg, style: AppTextStyles.statLabel),
       ),
     );
   }

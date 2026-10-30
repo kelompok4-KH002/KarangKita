@@ -6,11 +6,15 @@ import '../../autentikasi/halaman/halaman_login.dart';
 class AppDrawer extends StatelessWidget {
   final int activeIndex;
   final Function(int) onSelectTab;
+  final String namaPengguna;
+  final String peran;
 
   const AppDrawer({
     super.key,
     required this.activeIndex,
     required this.onSelectTab,
+    this.namaPengguna = 'Admin KarangKita',
+    this.peran = 'Ketua / Pengurus Utama',
   });
 
   void _tampilkanDialogKonfirmasiLogout(BuildContext context) {
@@ -63,13 +67,13 @@ class AppDrawer extends StatelessWidget {
               backgroundColor: AppColors.primaryLight,
               child: Icon(Icons.person, size: 36, color: AppColors.primary),
             ),
-            accountName: const Text(
-              'Admin KarangKita',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            accountName: Text(
+              namaPengguna,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
-            accountEmail: const Text(
-              'Ketua / Pengurus Utama',
-              style: TextStyle(fontSize: 12, color: Color(0xFF93C5FD)),
+            accountEmail: Text(
+              peran,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF93C5FD)),
             ),
           ),
 
