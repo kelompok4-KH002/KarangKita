@@ -23,7 +23,7 @@ KarangKita – Sistem Manajemen dan Informasi Kegiatan Karang Taruna
 
 INTRODUCTION
 
-KarangKita merupakan aplikasi mobile berbasis Android yang dirancang untuk membantu organisasi Karang Taruna dalam mengelola kegiatan warga, jadwal, data anggota, serta dokumentasi secara terpusat. Aplikasi dikembangkan menggunakan Flutter dan Dart dengan dukungan basis data untuk pengelolaan data yang terstruktur.
+KarangKita adalah aplikasi mobile berbasis Android yang dirancang untuk membantu organisasi Karang Taruna dalam mengelola kegiatan warga, jadwal, data anggota, serta dokumentasi secara terpusat. Aplikasi dikembangkan menggunakan Flutter dan Dart dengan dukungan basis data untuk pengelolaan data yang terstruktur.
 KarangKita memiliki tiga role pengguna, yaitu Admin/Pengurus, Anggota, dan Warga. Setiap role memiliki hak akses yang disesuaikan dengan kebutuhan dan tanggung jawabnya di lingkungan masyarakat.
 Fitur utama aplikasi meliputi autentikasi pengguna, beranda informatif, pengelolaan kegiatan warga, kalender jadwal kegiatan, direktori data anggota, serta galeri dokumentasi kegiatan. Admin memiliki hak penuh untuk menambah, memperbarui, dan menghapus data kegiatan, anggota, jadwal, maupun dokumentasi. Anggota dan Warga dapat melihat pengumuman, memantau kegiatan terdekat, mengecek jadwal di kalender, melihat profil anggota, serta mengakses arsip foto dan dokumentasi kegiatan.
 Alur utama aplikasi adalah Login → Beranda/Dashboard → Akses Menu Sesuai Role (Kegiatan, Jadwal, Anggota, Dokumentasi, Profil) → Logout.
