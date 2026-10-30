@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -107,6 +108,7 @@ class LayananAutentikasi {
         pesan: pesanErr,
       );
     } catch (e) {
+      debugPrint('Error autentikasi: $e');
       return HasilAutentikasi(
         sukses: false,
         pesan: 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
@@ -196,6 +198,7 @@ class LayananAutentikasi {
         pesan: pesanErr,
       );
     } catch (e) {
+      debugPrint('Error autentikasi: $e');
       return HasilAutentikasi(
         sukses: false,
         pesan: 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'karang_kita.dart';
 
 // Inisialisasi awal aplikasi
@@ -7,7 +8,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
     // Konek ke Firebase Cloud
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
   } catch (e) {
     debugPrint('Inisialisasi Firebase: $e');
   }
