@@ -17,7 +17,7 @@ class ModelUsulan {
   final DateTime tanggalUsulan;
   final String pengusulUid;
   final String pengusulNama;
-  final String status; // 'Menunggu' | 'Disetujui' | 'Ditolak'
+  final String status; // 'Menunggu' | 'Diteruskan' | 'Disetujui' | 'Ditolak'
   final String catatan; // alasan/catatan dari pengurus
   final String diprosesOleh;
   final List<String> dukungan; // uid anggota yang mendukung

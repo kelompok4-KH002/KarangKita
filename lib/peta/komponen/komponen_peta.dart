@@ -29,6 +29,12 @@ Future<bool> bukaDiGoogleMaps(double lat, double lng) {
   return launchUrl(uri, mode: LaunchMode.externalApplication);
 }
 
+// Buka rute petunjuk arah ke lokasi di Google Maps
+Future<bool> bukaRuteGoogleMaps(double lat, double lng) {
+  final uri = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng');
+  return launchUrl(uri, mode: LaunchMode.externalApplication);
+}
+
 Marker _buatMarker(LatLng titik) {
   return Marker(
     point: titik,
@@ -81,23 +87,56 @@ class PetaPratinjau extends StatelessWidget {
         ),
         if (tampilkanTombolMaps) ...[
           const SizedBox(height: 8),
-          OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.primary,
-              side: const BorderSide(color: AppColors.cardBorder),
-              shape: RoundedRectangleBorder(borderRadius: AppRadius.r10),
-            ),
-            onPressed: () async {
-              final pesan = ScaffoldMessenger.of(context);
-              final berhasil = await bukaDiGoogleMaps(lat, lng);
-              if (!berhasil) {
-                pesan.showSnackBar(
-                  const SnackBar(content: Text('Tidak dapat membuka Google Maps')),
-                );
-              }
-            },
-            icon: const Icon(Icons.open_in_new, size: 16),
-            label: const Text('Buka di Google Maps'),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.cardBorder),
+                    shape: RoundedRectangleBorder(borderRadius: AppRadius.r10),
+                  ),
+                  onPressed: () async {
+                    final pesan = ScaffoldMessenger.of(context);
+                    final berhasil = await bukaDiGoogleMaps(lat, lng);
+                    if (!berhasil) {
+                      pesan.showSnackBar(
+                        const SnackBar(content: Text('Tidak dapat membuka Google Maps')),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.open_in_new, size: 16),
+                  label: const Text('Buka di Maps'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.cardBorder),
+                    shape: RoundedRectangleBorder(borderRadius: AppRadius.r10),
+                  ),
+                  onPressed: () async {
+                    final pesan = ScaffoldMessenger.of(context);
+                    final berhasil = await bukaRuteGoogleMaps(lat, lng);
+                    if (!berhasil) {
+                      pesan.showSnackBar(
+                        const SnackBar(content: Text('Tidak dapat membuka Google Maps')),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.directions_outlined, size: 16),
+                  label: const Text('Petunjuk Arah'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
           ),
         ],
       ],

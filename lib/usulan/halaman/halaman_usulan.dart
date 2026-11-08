@@ -10,7 +10,7 @@ import '../../peta/komponen/komponen_peta.dart';
 import '../komponen/komponen_usulan.dart';
 
 // Halaman Usulan Kegiatan (bottom-up).
-// Semua anggota dapat mengusulkan & mendukung; jajaran pengurus menyetujui atau menolak.
+// Anggota mengusulkan -> Sekretaris meninjau & meneruskan -> Ketua ACC/Tolak.
 class HalamanUsulan extends StatefulWidget {
   final String namaPengguna;
   final String peran;
@@ -22,7 +22,7 @@ class HalamanUsulan extends StatefulWidget {
 }
 
 class _HalamanUsulanState extends State<HalamanUsulan> {
-  static const List<String> _filter = ['Semua', 'Menunggu', 'Disetujui', 'Ditolak'];
+  static const List<String> _filter = ['Semua', 'Menunggu', 'Diteruskan', 'Disetujui', 'Ditolak'];
   static const List<String> _bulan = [
     '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
   ];
@@ -30,7 +30,8 @@ class _HalamanUsulanState extends State<HalamanUsulan> {
   String _filterTerpilih = 'Semua';
 
   String get _uid => FirebaseAuth.instance.currentUser?.uid ?? '';
-  bool get _bisaMenilai => AppConstants.isPengurus(widget.peran);
+  bool get _isSekretaris => widget.peran == 'Sekretaris';
+  bool get _isKetua => AppConstants.bolehKelolaKeanggotaan(widget.peran);
 
   CollectionReference<Map<String, dynamic>> get _col =>
       FirebaseFirestore.instance.collection('usulan');
@@ -65,12 +66,12 @@ class _HalamanUsulanState extends State<HalamanUsulan> {
     try {
       await _col.doc(hasil.id).set(hasil.keMap());
       await LayananNotifikasi.kirim(
-        penerima: [LayananNotifikasi.kePengurus],
+        penerima: [LayananNotifikasi.kePeran('Sekretaris')],
         judul: 'Usulan kegiatan baru',
         isi: '${widget.namaPengguna} mengusulkan "${hasil.judul}".',
         tipe: 'usulan',
       );
-      _snack('Usulan berhasil dikirim ke pengurus');
+      _snack('Usulan berhasil dikirim ke Sekretaris');
     } catch (e) {
       _snack(_pesanError(e), error: true);
     }
@@ -132,6 +133,44 @@ class _HalamanUsulanState extends State<HalamanUsulan> {
     );
   }
 
+  // Sekretaris meneruskan usulan 'Menunggu' ke Ketua (status -> 'Diteruskan')
+  Future<void> _teruskan(ModelUsulan u) async {
+    final catatan = await _mintaCatatan(
+      judul: 'Teruskan ke Ketua?',
+      wajib: false,
+      tombol: 'Teruskan',
+      warna: AppColors.primary,
+    );
+    if (catatan == null) return;
+
+    try {
+      await _col.doc(u.id).update({
+        'status': 'Diteruskan',
+        'catatan': catatan,
+        'diprosesOleh': widget.namaPengguna,
+      });
+
+      await LayananNotifikasi.kirim(
+        penerima: [LayananNotifikasi.kePeran('Ketua')],
+        judul: 'Usulan kegiatan diteruskan',
+        isi: '${widget.namaPengguna} meneruskan usulan "${u.judul}" untuk disetujui.',
+        tipe: 'usulan',
+      );
+
+      await LayananNotifikasi.kirim(
+        penerima: [LayananNotifikasi.keUid(u.pengusulUid)],
+        judul: 'Usulan Anda diteruskan',
+        isi: '"${u.judul}" telah ditinjau Sekretaris dan diteruskan ke Ketua.',
+        tipe: 'usulan',
+      );
+
+      _snack('Usulan berhasil diteruskan ke Ketua');
+    } catch (e) {
+      _snack(_pesanError(e), error: true);
+    }
+  }
+
+  // Ketua/Admin menyetujui usulan 'Diteruskan' (status -> 'Disetujui' & buat kegiatan)
   Future<void> _setujui(ModelUsulan u) async {
     final catatan = await _mintaCatatan(
       judul: 'Setujui usulan?',
@@ -185,6 +224,7 @@ class _HalamanUsulanState extends State<HalamanUsulan> {
     }
   }
 
+  // Menolak usulan (alasan wajib)
   Future<void> _tolak(ModelUsulan u) async {
     final alasan = await _mintaCatatan(
       judul: 'Tolak usulan?',
@@ -287,7 +327,11 @@ class _HalamanUsulanState extends State<HalamanUsulan> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: u.status == 'Ditolak' ? AppColors.dangerBg : AppColors.badgeGreenBg,
+                    color: u.status == 'Ditolak'
+                        ? AppColors.dangerBg
+                        : u.status == 'Diteruskan'
+                            ? AppColors.badgeBlueBg
+                            : AppColors.badgeGreenBg,
                     borderRadius: AppRadius.r10,
                   ),
                   child: Text(
@@ -415,6 +459,7 @@ class _HalamanUsulanState extends State<HalamanUsulan> {
 
   Widget _kartuUsulan(ModelUsulan u) {
     final menunggu = u.status == 'Menunggu';
+    final diteruskan = u.status == 'Diteruskan';
     final sudahDukung = u.dukungan.contains(_uid);
     final milikSaya = u.pengusulUid == _uid;
 
@@ -496,7 +541,27 @@ class _HalamanUsulanState extends State<HalamanUsulan> {
                     icon: const Icon(Icons.delete_outline, size: 16),
                     label: const Text('Batalkan'),
                   ),
-                if (menunggu && _bisaMenilai) ...[
+                // Sekretaris meninjau usulan 'Menunggu' -> Tolak atau Teruskan ke Ketua
+                if (menunggu && _isSekretaris) ...[
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
+                    onPressed: () => _tolak(u),
+                    icon: const Icon(Icons.close_rounded, size: 16),
+                    label: const Text('Tolak'),
+                  ),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.textWhite,
+                      elevation: 0,
+                    ),
+                    onPressed: () => _teruskan(u),
+                    icon: const Icon(Icons.send_rounded, size: 16),
+                    label: const Text('Teruskan ke Ketua'),
+                  ),
+                ],
+                // Ketua meninjau usulan 'Diteruskan' -> Tolak atau ACC (Setujui)
+                if (diteruskan && _isKetua) ...[
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
                     onPressed: () => _tolak(u),

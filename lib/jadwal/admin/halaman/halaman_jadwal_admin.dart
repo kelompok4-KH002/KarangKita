@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/date_badge.dart';
+import '../../../notifikasi/layanan/layanan_notifikasi.dart';
 import '../komponen/komponen_jadwal_admin.dart';
 
 // Halaman Kelola Jadwal Admin Sesuai Mockup Figma (`admin_pengurus_kelola_jadwal.png`)
@@ -106,6 +107,15 @@ class _HalamanJadwalAdminState extends State<HalamanJadwalAdmin> {
         'kategori': jadwal.kategori,
         'tanggal': jadwal.tanggal.toIso8601String(),
       }, SetOptions(merge: true));
+
+      final isRapat = jadwal.kategori == 'Rapat';
+      final tglStr = '${jadwal.tanggal.day}/${jadwal.tanggal.month}/${jadwal.tanggal.year}';
+      await LayananNotifikasi.kirim(
+        penerima: [LayananNotifikasi.keSemua],
+        judul: isRapat ? 'Jadwal rapat baru' : 'Agenda baru',
+        isi: '"${jadwal.judul}" • $tglStr • ${jadwal.lokasi}',
+        tipe: 'kegiatan',
+      );
 
       setState(() {
         _daftarJadwal.insert(0, jadwal);

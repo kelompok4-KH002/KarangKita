@@ -32,6 +32,9 @@ class HalamanNotifikasi extends StatelessWidget {
         return Icons.badge_outlined;
       case 'usulan':
         return Icons.lightbulb_outline;
+      case 'kegiatan':
+      case 'iuran':
+        return Icons.event_note_outlined;
       default:
         return Icons.notifications_none;
     }
