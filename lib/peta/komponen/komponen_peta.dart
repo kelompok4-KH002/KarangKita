@@ -137,13 +137,6 @@ class PetaPratinjau extends StatelessWidget {
     );
   }
 }
-          ),
-        ],
-      ],
-    );
-  }
-}
-
 // Field "Titik lokasi di peta" untuk dipakai di form kegiatan & usulan
 class PemilihTitikPeta extends StatelessWidget {
   final double? lat;
