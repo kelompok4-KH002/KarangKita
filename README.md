@@ -1,31 +1,23 @@
-# karang_kita
+# KarangKita – Sistem Manajemen dan Informasi Kegiatan Karang Taruna
 
-A new Flutter project.
+KarangKita adalah aplikasi mobile berbasis Android yang dirancang untuk membantu organisasi Karang Taruna dalam mengelola kegiatan warga, jadwal, data anggota, usulan kegiatan, iuran taruna, serta dokumentasi secara terpusat. Aplikasi dikembangkan menggunakan Flutter dan Dart dengan dukungan Cloud Firestore, Firebase Auth, dan Cloudinary.
 
-## Getting Started
+## Struktur Peran Pengguna (Role)
 
-This project is a starting point for a Flutter application.
+Struktur hak akses pengguna di KarangKita terbagi menjadi beberapa peran terstandarisasi serta mode tamu:
 
-A few resources to get you started if this is your first Flutter project:
+- **Ketua**: Memiliki hak akses penuh organisasi, penetapan jabatan inti, pengelolaan keanggotaan (ACC/kelola anggota), dan persetujuan akhir usulan kegiatan.
+- **Sekretaris**: Mengelola dokumentasi administrasi serta meninjau dan meneruskan usulan kegiatan dari anggota ke Ketua.
+- **Bendahara**: Mengelola tagihan iuran taruna, memverifikasi bukti pembayaran (ACC Lunas / Tolak), dan melihat ringkasan keuangan.
+- **Pengurus**: Mengelola kegiatan, jadwal, galeri dokumentasi, serta memantau perkembangan organisasi.
+- **Anggota**: Mengajukan usulan kegiatan (bottom-up), memberikan dukungan pada usulan, melakukan konfirmasi pembayaran iuran, serta mengakses jadwal dan informasi organisasi.
+- **Mode Tamu (Tanpa Login)**: Tampilan hanya-lihat (read-only) bagi publik/masyarakat umum untuk memantau pengumuman dan kegiatan Karang Taruna tanpa perlu login.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Fitur Utama
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-<<<<<<< HEAD
-=======
-
-KarangKita – Sistem Manajemen dan Informasi Kegiatan Karang Taruna
-
-
-INTRODUCTION
-
-KarangKita adalah aplikasi mobile berbasis Android yang dirancang untuk membantu organisasi Karang Taruna dalam mengelola kegiatan warga, jadwal, data anggota, serta dokumentasi secara terpusat. Aplikasi dikembangkan menggunakan Flutter dan Dart dengan dukungan basis data untuk pengelolaan data yang terstruktur.
-KarangKita memiliki tiga role pengguna, yaitu Admin/Pengurus, Anggota, dan Warga. Setiap role memiliki hak akses yang disesuaikan dengan kebutuhan dan tanggung jawabnya di lingkungan masyarakat.
-Fitur utama aplikasi meliputi autentikasi pengguna, beranda informatif, pengelolaan kegiatan warga, kalender jadwal kegiatan, direktori data anggota, serta galeri dokumentasi kegiatan. Admin memiliki hak penuh untuk menambah, memperbarui, dan menghapus data kegiatan, anggota, jadwal, maupun dokumentasi. Anggota dan Warga dapat melihat pengumuman, memantau kegiatan terdekat, mengecek jadwal di kalender, melihat profil anggota, serta mengakses arsip foto dan dokumentasi kegiatan.
-Alur utama aplikasi adalah Login → Beranda/Dashboard → Akses Menu Sesuai Role (Kegiatan, Jadwal, Anggota, Dokumentasi, Profil) → Logout.
-Tujuan KarangKita adalah memusatkan informasi dan aktivitas organisasi dalam satu aplikasi mobile sehingga penyebaran informasi kegiatan kepada warga lebih cepat tersampaikan, pengelolaan data anggota lebih rapi, dan arsip dokumentasi tersimpan secara terorganisir tanpa bergantung pada pencatatan manual yang tersebar di banyak platform.
->>>>>>> dd30b4a (Update info KarangKita)
+1. **Autentikasi & Pengelolaan Profil**: Login/Registrasi mandiri, persetujuan akun pengurus, dan serah terima jabatan.
+2. **Pengelolaan Kegiatan & Jadwal**: Kalender interaktif, titik lokasi peta (OpenStreetMap & Google Maps Directions), dan pengumuman kegiatan.
+3. **Usulan Kegiatan Bottom-Up**: Anggota mengajukan usulan $\rightarrow$ Sekretaris meninjau & meneruskan $\rightarrow$ Ketua menyetujui (ACC) menjadi kegiatan resmi.
+4. **Iuran Taruna**: Form tagihan oleh Bendahara, konfirmasi bayar tunai/transfer oleh Anggota (unggah bukti ke Cloudinary), dan verifikasi pembayaran.
+5. **Galeri Dokumentasi**: Pengelompokan album dokumentasi kegiatan dengan unggah foto Cloudinary.
+6. **Sistem Notifikasi & Pengingat**: Notifikasi in-app terpadu serta pengingat lokal perangkat (H-1 & 1 jam sebelum acara).

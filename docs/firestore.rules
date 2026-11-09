@@ -52,17 +52,17 @@ service cloud.firestore {
 
       // Buat Dokumen Baru (CREATE):
       // A. Registrasi Mandiri: Peran 'Pengurus' wajib disetujui == false
-      // B. Tambah Anggota Baru oleh Admin: Hanya untuk peran 'Anggota' atau 'Warga'
+      // B. Tambah Anggota Baru oleh Admin: Hanya untuk peran 'Anggota'
       allow create: if isAuth() && (
         (
           request.auth.uid == userId &&
-          (request.resource.data.role == 'Pengurus' || request.resource.data.role == 'Anggota' || request.resource.data.role == 'Warga') &&
+          (request.resource.data.role == 'Pengurus' || request.resource.data.role == 'Anggota') &&
           (request.resource.data.role != 'Pengurus' || request.resource.data.disetujui == false)
         )
         ||
         (
           isApprovedAdmin() &&
-          (request.resource.data.role == 'Anggota' || request.resource.data.role == 'Warga')
+          request.resource.data.role == 'Anggota'
         )
       );
 
@@ -77,9 +77,9 @@ service cloud.firestore {
         request.resource.data.role == 'Pengurus' &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role']);
 
-      // B. Pengurus Disetujui mengedit Anggota/Warga: HANYA BOLEH merubah 'nama' & 'whatsapp'
+      // B. Pengurus Disetujui mengedit Anggota: HANYA BOLEH merubah 'nama' & 'whatsapp'
       allow update: if isApprovedAdmin() && request.auth.uid != userId &&
-        (resource.data.role == 'Anggota' || resource.data.role == 'Warga') &&
+        resource.data.role == 'Anggota' &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nama', 'whatsapp']);
 
       // C. Ketua / Admin Utama: Boleh mengubah SELURUH field milik orang lain
@@ -88,10 +88,10 @@ service cloud.firestore {
       // Hapus Akun (DELETE):
       // - DILARANG menghapus akun milik sendiri
       // - Ketua/Admin boleh menghapus akun siapapun (selain dirinya)
-      // - Pengurus disetujui HANYA BOLEH menghapus akun ber-peran 'Anggota' atau 'Warga'
+      // - Pengurus disetujui HANYA BOLEH menghapus akun ber-peran 'Anggota'
       allow delete: if isAuth() && request.auth.uid != userId && (
         isKetuaOrAdmin() ||
-        (isApprovedAdmin() && (resource.data.role == 'Anggota' || resource.data.role == 'Warga'))
+        (isApprovedAdmin() && resource.data.role == 'Anggota')
       );
     }
 
