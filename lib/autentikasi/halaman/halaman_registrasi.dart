@@ -19,7 +19,7 @@ class _HalamanRegistrasiState extends State<HalamanRegistrasi> {
 
   // Controller input form
   final _namaController = TextEditingController();
-  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _whatsappController = TextEditingController();
   final _passwordController = TextEditingController();
 
@@ -29,7 +29,7 @@ class _HalamanRegistrasiState extends State<HalamanRegistrasi> {
   @override
   void dispose() {
     _namaController.dispose();
-    _usernameController.dispose();
+    _emailController.dispose();
     _whatsappController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -45,7 +45,7 @@ class _HalamanRegistrasiState extends State<HalamanRegistrasi> {
 
     final hasil = await LayananAutentikasi.daftar(
       nama: _namaController.text,
-      username: _usernameController.text,
+      username: _emailController.text,
       whatsapp: _whatsappController.text,
       password: _passwordController.text,
       peranString: _peranTerpilih,
@@ -236,15 +236,25 @@ class _HalamanRegistrasiState extends State<HalamanRegistrasi> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Form Input Username
-                      _buildInputLabel('Username'),
+                      // Form Input Email
+                      _buildInputLabel('Email'),
                       TextFormField(
-                        controller: _usernameController,
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
                         decoration: _buildInputDecoration(
-                          hintText: 'contoh: namauser',
-                          prefixIcon: Icons.alternate_email,
+                          hintText: 'contoh: nama@gmail.com',
+                          prefixIcon: Icons.email_outlined,
                         ),
-                        validator: (val) => val == null || val.trim().isEmpty ? 'Username wajib diisi' : null,
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'Email wajib diisi';
+                          }
+                          final emailRegExp = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                          if (!emailRegExp.hasMatch(val.trim())) {
+                            return 'Format email tidak valid';
+                          }
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 16),
 

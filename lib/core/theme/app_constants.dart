@@ -47,6 +47,12 @@ class AppConstants {
   // Semua peran selain Anggota termasuk jajaran pengurus
   static bool isPengurus(String peran) => normalisasiPeran(peran) != 'Anggota';
 
+  // Jabatan inti: Ketua, Sekretaris, Bendahara, atau Admin lama
+  static bool isPengurusInti(String peran) {
+    final p = normalisasiPeran(peran);
+    return p == 'Ketua' || p == 'Sekretaris' || p == 'Bendahara' || p == 'Admin';
+  }
+
   // Hanya Ketua (dan Admin lama) yang mengelola keanggotaan
   static bool bolehKelolaKeanggotaan(String peran) => peran == 'Ketua' || peran == 'Admin';
 }

@@ -21,6 +21,8 @@ class _HalamanLoginState extends State<HalamanLogin> {
 
   bool _isPasswordVisible = false;
   bool _isLoading = false;
+  bool _belumVerifikasi = false;
+  bool _isResending = false;
   String? _errorMessage;
 
   @override
@@ -30,6 +32,121 @@ class _HalamanLoginState extends State<HalamanLogin> {
     super.dispose();
   }
 
+  // Kirim ulang email verifikasi
+  void _kirimUlangVerifikasi() async {
+    final emailInput = _usernameController.text.trim();
+    final passInput = _passwordController.text.trim();
+
+    if (emailInput.isEmpty || passInput.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Isi email dan kata sandi terlebih dahulu untuk mengirim ulang verifikasi.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isResending = true;
+    });
+
+    final hasil = await LayananAutentikasi.kirimUlangVerifikasi(
+      email: emailInput,
+      password: passInput,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _isResending = false;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(hasil.pesan),
+        backgroundColor: hasil.sukses ? const Color(0xFF1E3A8A) : Colors.redAccent,
+      ),
+    );
+  }
+
+  // Tampilkan dialog reset kata sandi
+  void _tampilkanDialogLupaPassword() {
+    final controller = TextEditingController(text: _usernameController.text.trim());
+    showDialog(
+      context: context,
+      builder: (context) {
+        bool isSubmitting = false;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Text('Lupa Kata Sandi', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Masukkan email Anda yang terdaftar untuk menerima tautan pemulihan kata sandi.',
+                    style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: controller,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(
+                      hintText: 'contoh: nama@gmail.com',
+                      prefixIcon: const Icon(Icons.email_outlined, size: 20),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSubmitting ? null : () => Navigator.pop(context),
+                  child: const Text('Batal'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1E3A8A),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          final emailInput = controller.text.trim();
+                          if (emailInput.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Email wajib diisi'), backgroundColor: Colors.redAccent),
+                            );
+                            return;
+                          }
+                          setDialogState(() => isSubmitting = true);
+                          final hasil = await LayananAutentikasi.resetPassword(emailInput);
+                          if (!context.mounted) return;
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(hasil.pesan),
+                              backgroundColor: hasil.sukses ? const Color(0xFF1E3A8A) : Colors.redAccent,
+                            ),
+                          );
+                        },
+                  child: isSubmitting
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Text('Kirim Link Reset'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   // Fungsi proses login
   void _prosesLogin() async {
     if (!_formKey.currentState!.validate()) return;
@@ -37,6 +154,7 @@ class _HalamanLoginState extends State<HalamanLogin> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _belumVerifikasi = false;
     });
 
     // Panggil fungsi login
@@ -56,6 +174,7 @@ class _HalamanLoginState extends State<HalamanLogin> {
     } else {
       setState(() {
         _errorMessage = hasil.pesan;
+        _belumVerifikasi = hasil.belumVerifikasi;
       });
     }
   }
@@ -87,31 +206,65 @@ class _HalamanLoginState extends State<HalamanLogin> {
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: Colors.red.shade200),
                       ),
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.error_outline, color: Colors.redAccent),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _errorMessage!,
-                              style: const TextStyle(color: Colors.redAccent, fontSize: 13),
-                            ),
+                          Row(
+                            children: [
+                              const Icon(Icons.error_outline, color: Colors.redAccent),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _errorMessage!,
+                                  style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                                ),
+                              ),
+                            ],
                           ),
+                          if (_belumVerifikasi) ...[
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton.icon(
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                onPressed: _isResending ? null : _kirimUlangVerifikasi,
+                                icon: _isResending
+                                    ? const SizedBox(
+                                        width: 12,
+                                        height: 12,
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: primaryColor),
+                                      )
+                                    : const Icon(Icons.send_rounded, size: 14, color: primaryColor),
+                                label: const Text(
+                                  'Kirim ulang',
+                                  style: TextStyle(
+                                    color: primaryColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
                     const SizedBox(height: 16),
                   ],
 
-                  // Field input username
+                  // Field input username / email
                   InputFieldCustom(
                     controller: _usernameController,
-                    label: 'Username / Email',
-                    hint: 'Masukkan username/email',
-                    prefixIcon: Icons.person_outline,
+                    label: 'Email / Username',
+                    hint: 'Masukkan email/username',
+                    prefixIcon: Icons.email_outlined,
                     validator: (val) {
                       if (val == null || val.trim().isEmpty) {
-                        return 'Username / Email tidak boleh kosong';
+                        return 'Email / Username tidak boleh kosong';
                       }
                       return null;
                     },
@@ -137,6 +290,28 @@ class _HalamanLoginState extends State<HalamanLogin> {
                       }
                       return null;
                     },
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Tautan Lupa Kata Sandi
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _tampilkanDialogLupaPassword,
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text(
+                        'Lupa kata sandi?',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: primaryColor,
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 24),
 

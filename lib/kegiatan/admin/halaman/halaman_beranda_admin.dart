@@ -16,6 +16,7 @@ import '../../../jadwal/admin/halaman/halaman_jadwal_admin.dart';
 import 'halaman_anggota_admin.dart';
 import 'halaman_galeri_admin.dart';
 import '../../../usulan/halaman/halaman_usulan.dart';
+import '../../../pengurus/halaman/halaman_panel_pengurus.dart';
 
 // Container Utama Admin dengan BottomNavigationBar & Navigation Drawer
 class HalamanBerandaAdmin extends StatefulWidget {
@@ -213,6 +214,59 @@ class _BerandaTabContentState extends State<_BerandaTabContent> {
             tanggal: now,
           ),
           const SizedBox(height: 16),
+
+          // Kartu Pintasan Panel Pengurus (Khusus Pengurus Inti)
+          if (AppConstants.isPengurusInti(widget.peran)) ...[
+            InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => HalamanPanelPengurus(
+                      namaPengguna: widget.namaPengguna,
+                      peran: widget.peran,
+                    ),
+                  ),
+                );
+              },
+              borderRadius: AppRadius.r16,
+              child: Container(
+                padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: AppRadius.r16,
+                  border: Border.all(color: AppColors.cardBorder),
+                ),
+                child: Row(
+                  children: [
+                    const CircleAvatar(
+                      backgroundColor: AppColors.primary,
+                      child: Icon(Icons.admin_panel_settings, color: AppColors.textWhite),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'Panel Pengurus',
+                            style: AppTextStyles.cardTitle,
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Ringkasan usulan, keuangan, dan struktur',
+                            style: AppTextStyles.cardSubtitle,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.primary),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
 
           // 2. 3 Stat Cards Dinamis (Kegiatan, Anggota, Foto)
           Row(
