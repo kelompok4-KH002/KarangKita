@@ -148,8 +148,7 @@ service cloud.firestore {
       allow update: if isBendaharaAtauKetua() || (isAuth() && resource.data.uidAnggota == request.auth.uid);
       allow delete: if isBendaharaAtauKetua();
     }
-
-    // 9. KOLEKSI 'kontak' (salinan minimal data penerima notifikasi email: uid, nama, email, role, disetujui)
+        // 9. KOLEKSI 'kontak' (salinan minimal data penerima notifikasi email: uid, nama, email, role, disetujui)
     match /kontak/{userId} {
       allow read: if isAuth();
       allow create: if isAuth() && (
@@ -165,6 +164,45 @@ service cloud.firestore {
         isAuth() && request.auth.uid == userId &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nama', 'email'])
       );
+      allow delete: if isKetuaOrAdmin();
+    }
+        // 10. KOLEKSI 'pendaftaran' (anggota mendaftar ke kegiatan; id dokumen = kegiatanId_uid)
+    match /pendaftaran/{docId} {
+      allow read: if isAuth() && (resource.data.uid == request.auth.uid || isApprovedAdmin());
+      allow create: if isAuth() &&
+        request.resource.data.uid == request.auth.uid &&
+        docId == request.resource.data.kegiatanId + '_' + request.auth.uid;
+      allow update, delete: if isAuth() && resource.data.uid == request.auth.uid &&
+        request.resource.data.uid == request.auth.uid;
+    }
+
+    // 11. KOLEKSI 'kehadiran' (RSVP "Saya akan hadir", bukan absensi)
+    match /kehadiran/{docId} {
+      allow read: if isAuth() && (resource.data.uid == request.auth.uid || isApprovedAdmin());
+      allow create: if isAuth() &&
+        request.resource.data.uid == request.auth.uid &&
+        docId == request.resource.data.kegiatanId + '_' + request.auth.uid &&
+        request.resource.data.status == 'akan_hadir';
+      allow update, delete: if isAuth() && resource.data.uid == request.auth.uid &&
+        request.resource.data.uid == request.auth.uid;
+    }
+
+    // 12. KOLEKSI 'kodeAbsen' (rahasia: hanya pengurus; id dokumen = id kegiatan)
+    match /kodeAbsen/{kegiatanId} {
+      allow read: if isApprovedAdmin();
+      allow write: if isSekretaris() || isKetuaOrAdmin();
+    }
+
+    // 13. KOLEKSI 'absensi' (bukti hadir; kode yang diketik HARUS sama dengan kodeAbsen)
+    match /absensi/{docId} {
+      allow read: if isAuth() && (resource.data.uid == request.auth.uid || isApprovedAdmin());
+      allow create: if isAuth() &&
+        request.resource.data.uid == request.auth.uid &&
+        docId == request.resource.data.kegiatanId + '_' + request.auth.uid &&
+        exists(/databases/$(database)/documents/kodeAbsen/$(request.resource.data.kegiatanId)) &&
+        request.resource.data.kode ==
+          get(/databases/$(database)/documents/kodeAbsen/$(request.resource.data.kegiatanId)).data.kode;
+      allow update: if false;
       allow delete: if isKetuaOrAdmin();
     }
   }
