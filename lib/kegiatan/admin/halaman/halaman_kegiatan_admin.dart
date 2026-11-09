@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../notifikasi/layanan/layanan_notifikasi.dart';
 import '../komponen/komponen_kegiatan_admin.dart';
 import 'halaman_detail_kegiatan.dart';
 
@@ -97,6 +98,15 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
         'lat': kegiatan.lat,
         'lng': kegiatan.lng,
       }, SetOptions(merge: true));
+
+      final isRapat = kegiatan.kategori == 'Rapat';
+      final tglStr = '${kegiatan.tanggal.day}/${kegiatan.tanggal.month}/${kegiatan.tanggal.year}';
+      await LayananNotifikasi.kirim(
+        penerima: [LayananNotifikasi.keSemua],
+        judul: isRapat ? 'Jadwal rapat baru' : 'Agenda baru',
+        isi: '"${kegiatan.judul}" • $tglStr • ${kegiatan.lokasi}',
+        tipe: 'kegiatan',
+      );
 
       setState(() {
         _daftarKegiatan.insert(0, kegiatan);

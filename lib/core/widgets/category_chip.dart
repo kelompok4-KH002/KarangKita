@@ -14,24 +14,29 @@ class CategoryChip extends StatelessWidget {
     switch (kategori) {
       case 'Rapat':
       case 'Pengurus':
+      case 'Diteruskan':
         return AppColors.badgeBlueBg;
 
       case 'Sosial':
       case 'Anggota':
       case 'Disetujui':
+      case 'Lunas':
         return AppColors.badgeGreenBg;
 
       case 'Olahraga':
       case 'Menunggu persetujuan':
       case 'Menunggu':
+      case 'Belum Bayar':
         return AppColors.badgeOrangeBg;
 
       case 'Edukasi':
       case 'Sekretaris':
+      case 'Transfer':
         return AppColors.badgePurpleBg;
 
       case 'Kerja Bakti':
       case 'Bendahara':
+      case 'Tunai':
         return AppColors.badgeTealBg;
 
       case 'Acara':
@@ -50,24 +55,29 @@ class CategoryChip extends StatelessWidget {
     switch (kategori) {
       case 'Rapat':
       case 'Pengurus':
+      case 'Diteruskan':
         return AppColors.badgeBlueText;
 
       case 'Sosial':
       case 'Anggota':
       case 'Disetujui':
+      case 'Lunas':
         return AppColors.badgeGreenText;
 
       case 'Olahraga':
       case 'Menunggu persetujuan':
       case 'Menunggu':
+      case 'Belum Bayar':
         return AppColors.badgeOrangeText;
 
       case 'Edukasi':
       case 'Sekretaris':
+      case 'Transfer':
         return AppColors.badgePurpleText;
 
       case 'Kerja Bakti':
       case 'Bendahara':
+      case 'Tunai':
         return AppColors.badgeTealText;
 
       case 'Acara':

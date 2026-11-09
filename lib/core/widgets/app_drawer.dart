@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../../autentikasi/layanan/pengalihan_role.dart';
+import '../../iuran/halaman/halaman_iuran.dart';
 
 // Navigation Drawer Interaktif Sesuai Usability & Mockup
 class AppDrawer extends StatelessWidget {
@@ -76,7 +77,7 @@ class AppDrawer extends StatelessWidget {
             ),
           ),
 
-          // 2. Menu Utama (Beranda, Kegiatan, Usulan, Jadwal, Anggota, Galeri)
+          // 2. Menu Utama (Beranda, Kegiatan, Usulan, Jadwal, Anggota, Galeri, Iuran)
           Expanded(
             child: ListView(
               padding: EdgeInsets.zero,
@@ -116,6 +117,20 @@ class AppDrawer extends StatelessWidget {
                   icon: Icons.photo_library_outlined,
                   label: 'Galeri',
                   index: 5,
+                ),
+
+                ListTile(
+                  leading: const Icon(Icons.account_balance_wallet_outlined, color: AppColors.primary),
+                  title: const Text('Iuran Taruna', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                  onTap: () {
+                    Navigator.pop(context); // Tutup drawer
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => HalamanIuran(namaPengguna: namaPengguna, peran: peran),
+                      ),
+                    );
+                  },
                 ),
 
                 const Divider(height: 24, thickness: 1, color: AppColors.cardBorder),

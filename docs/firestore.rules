@@ -1,5 +1,5 @@
 // ==============================================================================
-// FIRESTORE SECURITY RULES KARANGKITA (versi baru: Sekretaris, Bendahara, tamu, usulan, notifikasi)
+// FIRESTORE SECURITY RULES KARANGKITA (versi baru: Sekretaris, Bendahara, Iuran, Usulan)
 // Tempel manual di Firebase Console > Firestore Database > Rules, lalu klik Publish.
 // PERINGATAN: File ini hanya dokumentasi lokal. Jangan jalankan firebase deploy CLI.
 // ==============================================================================
@@ -33,6 +33,18 @@ service cloud.firestore {
         getUserData().disetujui == true;
     }
 
+    function isSekretaris() {
+      return isAuth() &&
+        getUserData().role == 'Sekretaris' &&
+        getUserData().disetujui == true;
+    }
+
+    function isBendaharaAtauKetua() {
+      return isAuth() &&
+        (getUserData().role == 'Bendahara' || getUserData().role == 'Ketua' || getUserData().role == 'Admin') &&
+        getUserData().disetujui == true;
+    }
+
     // 1. KOLEKSI 'users'
     match /users/{userId} {
       // Baca: Pemilik dokumen sendiri OR Admin/Pengurus disetujui
@@ -40,17 +52,17 @@ service cloud.firestore {
 
       // Buat Dokumen Baru (CREATE):
       // A. Registrasi Mandiri: Peran 'Pengurus' wajib disetujui == false
-      // B. Tambah Anggota Baru oleh Admin: Hanya untuk peran 'Anggota' atau 'Warga'
+      // B. Tambah Anggota Baru oleh Admin: Hanya untuk peran 'Anggota'
       allow create: if isAuth() && (
         (
           request.auth.uid == userId &&
-          (request.resource.data.role == 'Pengurus' || request.resource.data.role == 'Anggota' || request.resource.data.role == 'Warga') &&
+          (request.resource.data.role == 'Pengurus' || request.resource.data.role == 'Anggota') &&
           (request.resource.data.role != 'Pengurus' || request.resource.data.disetujui == false)
         )
         ||
         (
           isApprovedAdmin() &&
-          (request.resource.data.role == 'Anggota' || request.resource.data.role == 'Warga')
+          request.resource.data.role == 'Anggota'
         )
       );
 
@@ -65,9 +77,9 @@ service cloud.firestore {
         request.resource.data.role == 'Pengurus' &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role']);
 
-      // B. Pengurus Disetujui mengedit Anggota/Warga: HANYA BOLEH merubah 'nama' & 'whatsapp'
+      // B. Pengurus Disetujui mengedit Anggota: HANYA BOLEH merubah 'nama' & 'whatsapp'
       allow update: if isApprovedAdmin() && request.auth.uid != userId &&
-        (resource.data.role == 'Anggota' || resource.data.role == 'Warga') &&
+        resource.data.role == 'Anggota' &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nama', 'whatsapp']);
 
       // C. Ketua / Admin Utama: Boleh mengubah SELURUH field milik orang lain
@@ -76,10 +88,10 @@ service cloud.firestore {
       // Hapus Akun (DELETE):
       // - DILARANG menghapus akun milik sendiri
       // - Ketua/Admin boleh menghapus akun siapapun (selain dirinya)
-      // - Pengurus disetujui HANYA BOLEH menghapus akun ber-peran 'Anggota' atau 'Warga'
+      // - Pengurus disetujui HANYA BOLEH menghapus akun ber-peran 'Anggota'
       allow delete: if isAuth() && request.auth.uid != userId && (
         isKetuaOrAdmin() ||
-        (isApprovedAdmin() && (resource.data.role == 'Anggota' || resource.data.role == 'Warga'))
+        (isApprovedAdmin() && resource.data.role == 'Anggota')
       );
     }
 
@@ -101,13 +113,14 @@ service cloud.firestore {
       allow create, update, delete: if isApprovedAdmin();
     }
 
-    // 5. KOLEKSI 'usulan' (bottom-up: anggota mengusulkan, pengurus memutuskan)
+    // 5. KOLEKSI 'usulan' (bottom-up: Anggota mengusulkan, Sekretaris meninjau/meneruskan, Ketua memutuskan)
     match /usulan/{usulanId} {
       allow read: if isAuth();
       allow create: if isAuth() && request.resource.data.pengusulUid == request.auth.uid;
       allow update: if isAuth() && (
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['dukungan']) ||
-        isApprovedAdmin() ||
+        (isSekretaris() && resource.data.status == 'Menunggu' && (request.resource.data.status == 'Diteruskan' || request.resource.data.status == 'Ditolak')) ||
+        (isKetuaOrAdmin() && resource.data.status == 'Diteruskan' && (request.resource.data.status == 'Disetujui' || request.resource.data.status == 'Ditolak')) ||
         (resource.data.pengusulUid == request.auth.uid && resource.data.status == 'Menunggu')
       );
       allow delete: if isApprovedAdmin() ||
@@ -120,6 +133,20 @@ service cloud.firestore {
       allow create: if isAuth();
       allow update: if isAuth() &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['dibacaOleh']);
+    }
+
+    // 7. KOLEKSI 'iuran' (tagihan iuran oleh Bendahara/Ketua)
+    match /iuran/{iuranId} {
+      allow read: if isAuth();
+      allow create, update, delete: if isBendaharaAtauKetua();
+    }
+
+    // 8. KOLEKSI 'pembayaran' (konfirmasi bayar oleh anggota & verifikasi oleh Bendahara/Ketua)
+    match /pembayaran/{pembayaranId} {
+      allow read: if isAuth();
+      allow create: if isAuth() && request.resource.data.uidAnggota == request.auth.uid;
+      allow update: if isBendaharaAtauKetua() || (isAuth() && resource.data.uidAnggota == request.auth.uid);
+      allow delete: if isBendaharaAtauKetua();
     }
   }
 }

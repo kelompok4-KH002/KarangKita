@@ -37,6 +37,7 @@ class LayananNotifikasi {
   static String keUid(String uid) => 'uid:$uid';
   static String kePeran(String peran) => 'role:$peran';
   static const String kePengurus = 'pengurus';
+  static const String keSemua = 'semua';
 
   // Kirim notifikasi. Kegagalan kirim tidak boleh menggagalkan aksi utama,
   // jadi hanya dicatat ke log.
@@ -66,6 +67,7 @@ class LayananNotifikasi {
     final kunci = <String>[
       keUid(uid),
       kePeran(peran),
+      keSemua,
       if (AppConstants.isPengurus(peran)) kePengurus,
     ];
 
