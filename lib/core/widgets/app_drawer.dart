@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_constants.dart';
 import '../../autentikasi/layanan/pengalihan_role.dart';
 import '../../iuran/halaman/halaman_iuran.dart';
+import '../../pengurus/halaman/halaman_panel_pengurus.dart';
 
 // Navigation Drawer Interaktif Sesuai Usability & Mockup
 class AppDrawer extends StatelessWidget {
@@ -118,6 +120,24 @@ class AppDrawer extends StatelessWidget {
                   label: 'Galeri',
                   index: 5,
                 ),
+
+                if (AppConstants.isPengurusInti(peran))
+                  ListTile(
+                    leading: const Icon(Icons.admin_panel_settings_outlined, color: AppColors.primary),
+                    title: const Text(
+                      'Panel Pengurus',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context); // Tutup drawer
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => HalamanPanelPengurus(namaPengguna: namaPengguna, peran: peran),
+                        ),
+                      );
+                    },
+                  ),
 
                 ListTile(
                   leading: const Icon(Icons.account_balance_wallet_outlined, color: AppColors.primary),

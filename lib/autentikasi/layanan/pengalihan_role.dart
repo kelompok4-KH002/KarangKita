@@ -26,11 +26,13 @@ class HasilAutentikasi {
   final bool sukses;
   final String pesan;
   final RolePengguna? role;
+  final bool belumVerifikasi;
 
   HasilAutentikasi({
     required this.sukses,
     required this.pesan,
     this.role,
+    this.belumVerifikasi = false,
   });
 }
 
@@ -148,28 +150,48 @@ class LayananAutentikasi {
 
     RolePengguna role = peranString == 'Pengurus' ? RolePengguna.admin : RolePengguna.anggota;
 
-    final emailSynthetis = u.contains('@') ? u : '$u@karangkita.app';
+    final emailAddress = u.contains('@') ? u : '$u@karangkita.app';
+    final usernameOnly = u.contains('@') ? u.split('@').first : u;
 
     try {
       // simpan ke firebase auth (instance kedua jika sesi Ketua harus dipertahankan)
       final auth = pertahankanSesi ? await _authSekunder() : FirebaseAuth.instance;
       final cred = await auth.createUserWithEmailAndPassword(
-        email: emailSynthetis,
+        email: emailAddress,
         password: p,
       );
-      if (pertahankanSesi) await auth.signOut();
 
-      // simpan data profil ke firestore
+      // Kirim email verifikasi sebelum signOut()
       if (cred.user != null) {
-        await FirebaseFirestore.instance.collection('users').doc(cred.user!.uid).set({
+        try {
+          await cred.user!.sendEmailVerification();
+        } catch (e) {
+          debugPrint('Gagal mengirim email verifikasi: $e');
+        }
+
+        if (pertahankanSesi) await auth.signOut();
+
+        // simpan data profil ke firestore (users & kontak secara atomik)
+        final db = FirebaseFirestore.instance;
+        final batch = db.batch();
+        batch.set(db.collection('users').doc(cred.user!.uid), {
           'uid': cred.user!.uid,
           'nama': nama,
-          'username': u,
+          'email': emailAddress,
+          'username': usernameOnly,
           'whatsapp': whatsapp,
           'role': peranString,
           'disetujui': !butuhPersetujuanAdmin,
           'createdAt': FieldValue.serverTimestamp(),
         });
+        batch.set(db.collection('kontak').doc(cred.user!.uid), {
+          'uid': cred.user!.uid,
+          'nama': nama,
+          'email': emailAddress,
+          'role': peranString,
+          'disetujui': !butuhPersetujuanAdmin,
+        });
+        await batch.commit();
 
         // Notifikasi keanggotaan: Ketua perlu ACC pengurus baru, pengurus tahu ada anggota baru
         if (butuhPersetujuanAdmin) {
@@ -191,7 +213,9 @@ class LayananAutentikasi {
     } on FirebaseAuthException catch (e) {
       String pesanErr = 'Gagal mendaftar. Silakan coba lagi.';
       if (e.code == 'email-already-in-use') {
-        pesanErr = 'Username/Email sudah terdaftar. Gunakan username lain.';
+        pesanErr = 'Email sudah terdaftar. Gunakan email lain.';
+      } else if (e.code == 'invalid-email') {
+        pesanErr = 'Format email tidak valid.';
       } else if (e.code == 'weak-password') {
         pesanErr = 'Kata sandi terlalu lemah. Gunakan minimal 6 karakter.';
       } else if (e.code == 'network-request-failed') {
@@ -209,9 +233,9 @@ class LayananAutentikasi {
       );
     }
 
-    String pesanSukses = 'Registrasi akun berhasil!';
+    String pesanSukses = 'Registrasi berhasil! Cek email Anda untuk verifikasi.';
     if (butuhPersetujuanAdmin) {
-      pesanSukses = 'Registrasi berhasil! Akun Pengurus Anda sedang menunggu persetujuan (ACC) dari Admin Utama.';
+      pesanSukses = 'Registrasi berhasil! Akun Pengurus Anda sedang menunggu persetujuan (ACC) dari Admin Utama. Cek email Anda untuk verifikasi.';
     }
 
     return HasilAutentikasi(
@@ -244,7 +268,7 @@ class LayananAutentikasi {
     if (u.isEmpty || p.isEmpty) {
       return HasilAutentikasi(
         sukses: false,
-        pesan: 'Username dan password wajib diisi.',
+        pesan: 'Email/Username dan password wajib diisi.',
       );
     }
 
@@ -258,6 +282,19 @@ class LayananAutentikasi {
       );
 
       if (cred.user != null) {
+        final userEmail = cred.user!.email ?? '';
+        final isLegacy = userEmail.endsWith('@karangkita.app');
+
+        // Pengecekan verifikasi email: Akun non-legacy wajib verifikasi email
+        if (!isLegacy && !cred.user!.emailVerified) {
+          await FirebaseAuth.instance.signOut();
+          return HasilAutentikasi(
+            sukses: false,
+            pesan: 'Email belum diverifikasi. Silakan periksa kotak masuk email Anda.',
+            belumVerifikasi: true,
+          );
+        }
+
         // cek status disetujui di firestore
         final doc = await FirebaseFirestore.instance.collection('users').doc(cred.user!.uid).get();
 
@@ -292,9 +329,11 @@ class LayananAutentikasi {
         }
       }
     } on FirebaseAuthException catch (e) {
-      String pesanErr = 'Username atau password tidak cocok.';
-      if (e.code == 'user-not-found' || e.code == 'wrong-password' || e.code == 'invalid-credential') {
-        pesanErr = 'Username atau password tidak cocok.';
+      String pesanErr = 'Email/Username atau password tidak cocok.';
+      if (e.code == 'invalid-email') {
+        pesanErr = 'Format email tidak valid.';
+      } else if (e.code == 'user-not-found' || e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        pesanErr = 'Email/Username atau password tidak cocok.';
       } else if (e.code == 'network-request-failed') {
         pesanErr = 'Tidak dapat terhubung. Periksa koneksi internet Anda.';
       }
@@ -312,7 +351,91 @@ class LayananAutentikasi {
 
     return HasilAutentikasi(
       sukses: false,
-      pesan: 'Username atau password tidak cocok.',
+      pesan: 'Email/Username atau password tidak cocok.',
     );
+  }
+
+  // Kirim ulang email verifikasi
+  static Future<HasilAutentikasi> kirimUlangVerifikasi({
+    required String email,
+    required String password,
+  }) async {
+    final u = email.trim().toLowerCase();
+    final p = password.trim();
+
+    if (u.isEmpty || p.isEmpty) {
+      return HasilAutentikasi(
+        sukses: false,
+        pesan: 'Email dan kata sandi wajib diisi untuk mengirim ulang verifikasi.',
+      );
+    }
+
+    final emailSynthetis = u.contains('@') ? u : '$u@karangkita.app';
+
+    try {
+      final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: emailSynthetis,
+        password: p,
+      );
+      if (cred.user != null) {
+        await cred.user!.sendEmailVerification();
+        await FirebaseAuth.instance.signOut();
+        return HasilAutentikasi(
+          sukses: true,
+          pesan: 'Email verifikasi telah dikirim ulang. Silakan periksa inbox atau spam Anda.',
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      String pesanErr = 'Gagal mengirim email verifikasi.';
+      if (e.code == 'invalid-email') {
+        pesanErr = 'Format email tidak valid.';
+      } else if (e.code == 'network-request-failed') {
+        pesanErr = 'Tidak dapat terhubung. Periksa koneksi internet Anda.';
+      }
+      return HasilAutentikasi(sukses: false, pesan: pesanErr);
+    } catch (e) {
+      debugPrint('Error resend verifikasi: $e');
+    }
+    return HasilAutentikasi(
+      sukses: false,
+      pesan: 'Gagal mengirim email verifikasi. Periksa kembali kredensial Anda.',
+    );
+  }
+
+  // Kirim email reset kata sandi
+  static Future<HasilAutentikasi> resetPassword(String email) async {
+    final e = email.trim().toLowerCase();
+    if (e.isEmpty) {
+      return HasilAutentikasi(
+        sukses: false,
+        pesan: 'Email wajib diisi.',
+      );
+    }
+
+    final emailSynthetis = e.contains('@') ? e : '$e@karangkita.app';
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: emailSynthetis);
+      return HasilAutentikasi(
+        sukses: true,
+        pesan: 'Tautan pemulihan kata sandi telah dikirim ke email Anda. Silakan cek inbox atau spam.',
+      );
+    } on FirebaseAuthException catch (err) {
+      String pesanErr = 'Gagal mengirim email pemulihan kata sandi.';
+      if (err.code == 'invalid-email') {
+        pesanErr = 'Format email tidak valid.';
+      } else if (err.code == 'user-not-found') {
+        pesanErr = 'Email tidak terdaftar di sistem.';
+      } else if (err.code == 'network-request-failed') {
+        pesanErr = 'Tidak dapat terhubung. Periksa koneksi internet Anda.';
+      }
+      return HasilAutentikasi(sukses: false, pesan: pesanErr);
+    } catch (e) {
+      debugPrint('Error reset password: $e');
+      return HasilAutentikasi(
+        sukses: false,
+        pesan: 'Terjadi kesalahan. Silakan coba lagi.',
+      );
+    }
   }
 }

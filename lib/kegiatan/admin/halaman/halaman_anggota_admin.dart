@@ -42,12 +42,67 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
   
   String _currentUserRole = 'Anggota';
   String _currentUserId = '';
+  bool _sedangSinkron = false;
 
   @override
   void initState() {
     super.initState();
     _daftarAnggota = [];
     _muatUserFirestore();
+  }
+
+  void _sinkronkanKontak() async {
+    setState(() {
+      _sedangSinkron = true;
+    });
+
+    try {
+      final snap = await FirebaseFirestore.instance.collection('users').get();
+      final db = FirebaseFirestore.instance;
+      final batch = db.batch();
+      int count = 0;
+
+      for (var doc in snap.docs) {
+        final data = doc.data();
+        final rawUsername = (data['username'] ?? '').toString();
+        final email = (data['email'] ?? (rawUsername.contains('@') ? rawUsername : (rawUsername.isNotEmpty ? '$rawUsername@karangkita.app' : ''))).toString();
+
+        if (email.isNotEmpty) {
+          final role = AppConstants.normalisasiPeran(data['role'] ?? data['jabatan']);
+          final isDisetujui = data['disetujui'] ?? true;
+          batch.set(
+            db.collection('kontak').doc(doc.id),
+            {
+              'uid': doc.id,
+              'nama': (data['nama'] ?? data['username'] ?? 'Pengguna').toString(),
+              'email': email,
+              'role': role,
+              'disetujui': isDisetujui,
+            },
+            SetOptions(merge: true),
+          );
+          count++;
+        }
+      }
+
+      await batch.commit();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Berhasil menyinkronkan $count kontak ke koleksi kontak.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_getPesanError(e)), backgroundColor: AppColors.danger),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _sedangSinkron = false;
+        });
+      }
+    }
   }
 
   @override
@@ -249,6 +304,17 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
             final batch = db.batch();
             batch.set(db.collection('users').doc(item.id), updatePayload, SetOptions(merge: true));
             batch.set(db.collection('users').doc(pemegang.id), {'role': 'Pengurus'}, SetOptions(merge: true));
+
+            final Map<String, dynamic> kontakPayloadItem = {};
+            if (updatePayload.containsKey('nama')) kontakPayloadItem['nama'] = updatePayload['nama'];
+            if (updatePayload.containsKey('email')) kontakPayloadItem['email'] = updatePayload['email'];
+            if (updatePayload.containsKey('role')) kontakPayloadItem['role'] = updatePayload['role'];
+            if (updatePayload.containsKey('disetujui')) kontakPayloadItem['disetujui'] = updatePayload['disetujui'];
+            if (kontakPayloadItem.isNotEmpty) {
+              batch.set(db.collection('kontak').doc(item.id), kontakPayloadItem, SetOptions(merge: true));
+            }
+            batch.set(db.collection('kontak').doc(pemegang.id), {'role': 'Pengurus'}, SetOptions(merge: true));
+
             await batch.commit();
 
             await LayananNotifikasi.kirim(
@@ -274,11 +340,20 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
         }
       }
 
-      // 1. Tulis ke Firestore DULU (untuk mode Edit)
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(item.id)
-          .set(updatePayload, SetOptions(merge: true));
+      // 1. Tulis ke Firestore DULU (users & kontak untuk mode Edit)
+      final db = FirebaseFirestore.instance;
+      final batch = db.batch();
+      batch.set(db.collection('users').doc(item.id), updatePayload, SetOptions(merge: true));
+
+      final Map<String, dynamic> kontakPayload = {};
+      if (updatePayload.containsKey('nama')) kontakPayload['nama'] = updatePayload['nama'];
+      if (updatePayload.containsKey('email')) kontakPayload['email'] = updatePayload['email'];
+      if (updatePayload.containsKey('role')) kontakPayload['role'] = updatePayload['role'];
+      if (updatePayload.containsKey('disetujui')) kontakPayload['disetujui'] = updatePayload['disetujui'];
+      if (kontakPayload.isNotEmpty) {
+        batch.set(db.collection('kontak').doc(item.id), kontakPayload, SetOptions(merge: true));
+      }
+      await batch.commit();
 
       // Notifikasi keanggotaan jika jabatan berubah
       if (isEdit && jabatanLama != null && jabatanLama != item.jabatan) {
@@ -317,9 +392,11 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
 
   void _setujuiAkun(ModelAnggotaAdmin item) async {
     try {
-      await FirebaseFirestore.instance.collection('users').doc(item.id).update({
-        'disetujui': true,
-      });
+      final db = FirebaseFirestore.instance;
+      final batch = db.batch();
+      batch.update(db.collection('users').doc(item.id), {'disetujui': true});
+      batch.set(db.collection('kontak').doc(item.id), {'disetujui': true}, SetOptions(merge: true));
+      await batch.commit();
 
       await LayananNotifikasi.kirim(
         penerima: [LayananNotifikasi.keUid(item.id)],
@@ -389,8 +466,12 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
               Navigator.pop(context); // Tutup dialog konfirmasi
 
               try {
-                // 1. Hapus di Firestore DULU
-                await FirebaseFirestore.instance.collection('users').doc(item.id).delete();
+                // 1. Hapus di Firestore DULU (users & kontak)
+                final db = FirebaseFirestore.instance;
+                final batch = db.batch();
+                batch.delete(db.collection('users').doc(item.id));
+                batch.delete(db.collection('kontak').doc(item.id));
+                await batch.commit();
 
                 // 2. Jika Firestore BERHASIL, hapus dari list lokal
                 setState(() {
@@ -487,6 +568,33 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
               ),
             ),
           ),
+
+          if (_currentUserRole == 'Ketua') ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: OutlinedButton.icon(
+                  onPressed: _sedangSinkron ? null : _sinkronkanKontak,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    shape: RoundedRectangleBorder(borderRadius: AppRadius.r20),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  ),
+                  icon: _sedangSinkron
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                        )
+                      : const Icon(Icons.sync, size: 16),
+                  label: const Text('Sinkronkan kontak', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
 
           // List Items atau Empty States
           Expanded(

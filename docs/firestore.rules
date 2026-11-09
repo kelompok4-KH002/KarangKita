@@ -148,5 +148,24 @@ service cloud.firestore {
       allow update: if isBendaharaAtauKetua() || (isAuth() && resource.data.uidAnggota == request.auth.uid);
       allow delete: if isBendaharaAtauKetua();
     }
+
+    // 9. KOLEKSI 'kontak' (salinan minimal data penerima notifikasi email: uid, nama, email, role, disetujui)
+    match /kontak/{userId} {
+      allow read: if isAuth();
+      allow create: if isAuth() && (
+        (
+          request.auth.uid == userId &&
+          (request.resource.data.role == 'Pengurus' || request.resource.data.role == 'Anggota') &&
+          (request.resource.data.role != 'Pengurus' || request.resource.data.disetujui == false)
+        )
+        ||
+        isApprovedAdmin()
+      );
+      allow update: if isKetuaOrAdmin() || (
+        isAuth() && request.auth.uid == userId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nama', 'email'])
+      );
+      allow delete: if isKetuaOrAdmin();
+    }
   }
 }
