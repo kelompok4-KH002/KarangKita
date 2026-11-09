@@ -9,10 +9,14 @@
 //   kegiatan : daftar kegiatan (dibuat pengurus). Anggota hanya MEMBACA.
 //              tanggal = String ISO (toIso8601String), jam disimpan di field 'waktu'.
 //   galeri   : foto dokumentasi (diunggah pengurus ke Cloudinary). Anggota hanya MEMBACA.
+//              field: albumId, album, tanggalAlbum (yyyy-MM-dd), urutan, deskripsi,
+//              downloadURL, publicId, uploadedBy, createdAt (sama dengan yang ditulis halaman_galeri_admin).
+//   absensi  : bukti hadir anggota. Kode absen TIDAK disimpan di dokumen kegiatan
+//              (bisa dibaca semua orang); kode dicocokkan oleh Rules di server.
 //   users    : profil (dibaca lewat UserService di pendukung_anggota.dart)
 //
-// Fitur pendaftaran / kehadiran (RSVP) / absensi BELUM ada di Firestore Rules,
-// jadi dimatikan lewat saklar kFiturKehadiran di bawah (menunggu keputusan tim).
+// Fitur pendaftaran / kehadiran (RSVP) / absensi DIMASUKKAN, tapi tetap dimatikan lewat
+// saklar kFiturKehadiran di bawah sampai Rules-nya dipublish dan dites oleh tim.
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -20,9 +24,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../pendukung_anggota.dart';
 
 // SAKLAR FITUR: pendaftaran, RSVP 'Saya Akan Hadir', dan absensi kode.
-//   false = fitur disembunyikan & tidak menyentuh Firestore (aman untuk rules sekarang).
-//   true  = aktifkan, TAPI baru boleh setelah Rules untuk 'pendaftaran', 'kehadiran',
-//           'absensi' ditambahkan dan ada layar sekretaris untuk kode absen.
+//   false = fitur disembunyikan & tidak menyentuh Firestore.
+//   true  = aktifkan. Hanya diubah oleh pemegang Rules, setelah Rules untuk
+//           'pendaftaran', 'kehadiran', 'absensi' dipublish dan dites.
 const bool kFiturKehadiran = false;
 
 // Nama hari. Index 0 = Senin (sesuai DateTime.weekday - 1).
@@ -38,7 +42,8 @@ String dateKey(DateTime d) => '${d.year}-${d.month}-${d.day}';
 // String ISO, tapi fungsi ini juga mengerti Timestamp supaya aman untuk data lama.
 DateTime bacaTanggal(dynamic v) {
   if (v is Timestamp) return v.toDate();
-  if (v is String) return DateTime.tryParse(v) ?? DateTime.now();
+  // toLocal(): kalau string berakhiran 'Z' (UTC), dikonversi ke jam lokal supaya tanggalnya tidak bergeser.
+  if (v is String) return (DateTime.tryParse(v) ?? DateTime.now()).toLocal();
   return DateTime.now();
 }
 
@@ -56,8 +61,8 @@ class KegiatanItem {
   final String kategori;
   final bool wajib;
   final int kuota;
-  // Kode absensi dari sekretaris (kosong = absensi belum dibuka). Dipakai bila kFiturKehadiran = true.
-  final String kodeAbsen;
+  // Sekretaris sudah membuka absensi? (Kodenya sendiri TIDAK ada di sini, disimpan terpisah.)
+  final bool absensiDibuka;
 
   KegiatanItem({
     required this.id,
@@ -69,15 +74,17 @@ class KegiatanItem {
     required this.kategori,
     required this.wajib,
     required this.kuota,
-    required this.kodeAbsen,
+    required this.absensiDibuka,
   });
 
   // Mengubah dokumen Firestore menjadi KegiatanItem.
+  factory KegiatanItem.fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> d) => KegiatanItem.fromMap(d.id, d.data());
+
+  // Versi dari Map biasa (dipakai fromDoc, dan mudah dites tanpa Firebase).
   // Jam dibaca dari 'waktu' (standar kelompok), cadangan 'jam' (data lama).
-  factory KegiatanItem.fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> d) {
-    final m = d.data();
+  factory KegiatanItem.fromMap(String id, Map<String, dynamic> m) {
     return KegiatanItem(
-      id: d.id,
+      id: id,
       judul: (m['judul'] ?? '').toString(),
       tanggal: bacaTanggal(m['tanggal']),
       jam: (m['waktu'] ?? m['jam'] ?? '').toString(),
@@ -86,7 +93,7 @@ class KegiatanItem {
       kategori: (m['kategori'] ?? '').toString(),
       wajib: m['wajib'] == true,
       kuota: (m['kuota'] as num?)?.toInt() ?? 0,
-      kodeAbsen: (m['kodeAbsen'] ?? '').toString(),
+      absensiDibuka: m['absensiDibuka'] == true,
     );
   }
 
@@ -148,9 +155,16 @@ class AlbumGaleri {
   final String albumId;
   final String judul;
   final String tanggal; // teks siap tampil, contoh "17 Agu 2026"
+  final String tanggalIso; // yyyy-MM-dd, dipakai untuk mengurutkan
   final List<GaleriFoto> fotos;
 
-  AlbumGaleri({required this.albumId, required this.judul, required this.tanggal, required this.fotos});
+  AlbumGaleri({
+    required this.albumId,
+    required this.judul,
+    required this.tanggal,
+    required this.tanggalIso,
+    required this.fotos,
+  });
 
   String? get sampul => fotos.isEmpty || fotos.first.url.isEmpty ? null : fotos.first.url;
 }
@@ -190,13 +204,22 @@ class KegiatanService {
         final f = GaleriFoto.fromDoc(d);
         peta.putIfAbsent(f.albumId, () => []).add(f);
       }
-      return peta.values.map((fotos) {
+      final hasil = peta.values.map((fotos) {
         fotos.sort((a, b) => a.urutan.compareTo(b.urutan));
         final f = fotos.first;
         final t = DateTime.tryParse(f.tanggalAlbum);
         final teksTanggal = t == null ? f.tanggalAlbum : '${t.day} ${kBulanSingkat[t.month - 1]} ${t.year}';
-        return AlbumGaleri(albumId: f.albumId, judul: f.album, tanggal: teksTanggal, fotos: fotos);
+        return AlbumGaleri(
+          albumId: f.albumId,
+          judul: f.album,
+          tanggal: teksTanggal,
+          tanggalIso: f.tanggalAlbum,
+          fotos: fotos,
+        );
       }).toList();
+      // Urutan sama seperti halaman galeri admin: tanggal album terbaru di atas.
+      hasil.sort((a, b) => b.tanggalIso.compareTo(a.tanggalIso));
+      return hasil;
     });
   }
 
@@ -249,23 +272,25 @@ class KegiatanService {
   }
 
   // Absen dengan kode dari sekretaris. null = berhasil, selain itu pesan gagal.
+  // Kode dikirim apa adanya dan DICOCOKKAN OLEH RULES di server (bukan di aplikasi).
   static Future<String?> absen(KegiatanItem k, String kode) async {
     final uid = _uid;
     if (!kFiturKehadiran) return 'Fitur absensi belum tersedia';
     if (uid == null) return 'Kamu belum login';
     if (!k.hariIni) return 'Absensi hanya bisa dilakukan di hari kegiatan';
-    if (k.kodeAbsen.isEmpty) return 'Absensi belum dibuka oleh sekretaris';
-    if (kode.trim() != k.kodeAbsen) return 'Kode absen salah';
+    if (!k.absensiDibuka) return 'Absensi belum dibuka oleh sekretaris';
     try {
       final nama = await _namaUser();
       await _db.collection('absensi').doc('${k.id}_$uid').set({
         'kegiatanId': k.id,
         'uid': uid,
         'nama': nama,
+        'kode': kode.trim(), // dicocokkan oleh Rules di server
         'createdAt': FieldValue.serverTimestamp(),
       });
       return null;
     } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') return 'Kode absen salah, atau kamu sudah absen';
       return 'Gagal: ${e.code}';
     }
   }

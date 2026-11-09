@@ -1028,7 +1028,7 @@ Widget absenButton(BuildContext context, KegiatanItem k, bool sudahAbsen) {
       label: const Text('Sudah Absen'),
     );
   }
-  if (k.kodeAbsen.isEmpty) {
+  if (!k.absensiDibuka) {
     return OutlinedButton.icon(
       style: outlineButton,
       onPressed: null,
