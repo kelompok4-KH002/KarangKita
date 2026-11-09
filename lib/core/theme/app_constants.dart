@@ -3,6 +3,11 @@ class AppConstants {
   // Cloudinary Configuration (Unsigned Upload Preset)
   static const String kCloudinaryCloudName = 'e2o62ft2';
   static const String kCloudinaryUploadPreset = 'karangkita_galeri';
+  // EmailJS (notifikasi email). Public Key memang ikut terpasang di aplikasi.
+  // JANGAN pernah menaruh Private Key di sini.
+  static const String kEmailJsServiceId = 'service_m2oertr';
+  static const String kEmailJsTemplateId = 'template_0eqqy4k';
+  static const String kEmailJsPublicKey = 'gB8TAkLK_PFm-Hw52';
 
   // Daftar 6 Kategori Kegiatan Utama Terstandarisasi
   static const List<String> kDaftarKategoriUtama = [
