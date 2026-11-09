@@ -339,45 +339,6 @@ class UserService {
     final doc = await _db.collection('users').doc(uid).get();
     return doc.data();
   }
-
-  // Daftar akun baru dalam 2 langkah:
-  //   1) buat akun di Firebase Authentication (email + password)
-  //   2) simpan profil ke collection 'users' (ID dokumen = uid akun tadi)
-  // role 'anggota' dipakai untuk membedakan anggota dan pengurus.
-  static Future<void> register({
-    required String nama,
-    required String email,
-    required String password,
-    required String wa,
-  }) async {
-    final cred = await _auth.createUserWithEmailAndPassword(email: email, password: password);
-    await _db.collection('users').doc(cred.user!.uid).set({
-      'nama': nama,
-      'email': email,
-      'wa': wa,
-      'role': 'anggota',
-      'status': 'Anggota Aktif',
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-  }
-
-  // Login dengan email dan password. Kalau salah, Firebase melempar FirebaseAuthException.
-  static Future<void> login(String email, String password) {
-    return _auth.signInWithEmailAndPassword(email: email, password: password);
-  }
-
-  // Keluar dari akun.
-  static Future<void> logout() => _auth.signOut();
-
-  // Mengirim email berisi link untuk membuat password baru.
-  static Future<void> resetPassword(String email) => _auth.sendPasswordResetEmail(email: email);
-
-  // Memperbarui nama dan nomor WA di dokumen profil user yang sedang login.
-  static Future<void> updateProfil({required String nama, required String wa}) async {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) return;
-    await _db.collection('users').doc(uid).update({'nama': nama, 'wa': wa});
-  }
 }
 
 

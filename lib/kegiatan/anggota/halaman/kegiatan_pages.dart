@@ -4,25 +4,20 @@
 // Isi file ini:
 //   1. KegiatanBuilder   -> pembantu: mengambil data dari Firestore untuk halaman
 //   2. BerandaPage       -> kegiatan terdekat, agenda, tombol usulan
-//   3. KegiatanPage      -> tab Mendatang / Selesai / Usulan
+//   3. KegiatanPage      -> tab Mendatang / Selesai
 //   4. DaftarKegiatanPage-> form pendaftaran
 //   5. JadwalPage        -> kalender + agenda per tanggal
-//   6. Absensi, statistik keaktifan, dan Usulan Kegiatan
+//   6. Absensi dan statistik keaktifan (dimatikan lewat kFiturKehadiran)
 //
 // Alur data: Firestore -> KegiatanService -> KegiatanBuilder -> halaman -> tampilan.
 
 import 'package:firebase_core/firebase_core.dart' show FirebaseException;
 import 'package:flutter/material.dart';
 
+import '../../../usulan/halaman/halaman_usulan.dart';
 import '../layanan/kegiatan_service.dart';
 import '../pendukung_anggota.dart';
 
-// SAKLAR ALAT PENGEMBANGAN.
-//   true  = muncul tombol uji (isi data contoh, kegiatan hari ini).
-//   false = tombol uji disembunyikan.
-// PAKAI true HANYA di Firebase milikmu sendiri. Ubah ke false sebelum memakai
-// Firebase bersama temanmu supaya data palsu tidak masuk ke database asli.
-const bool kModeDev = true;
 
 // =====================================================================
 // PEMBANTU: ambil data kegiatan + status daftar/hadir milik user (realtime)
@@ -108,6 +103,8 @@ Widget hadirButton(
       required String label,
       required ButtonStyle style,
     }) {
+  // Fitur RSVP dimatikan sampai Rules Firestore-nya ada (lihat kFiturKehadiran).
+  if (!kFiturKehadiran) return const SizedBox.shrink();
   if (sudah) {
     return OutlinedButton.icon(
       style: outlineButton,
@@ -232,35 +229,6 @@ class BerandaPage extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
-              // Alat pengembangan: kalau database kosong, tampilkan tombol untuk mengisi data contoh.
-              if (kModeDev && items.isEmpty) ...[
-                AppCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Belum ada data kegiatan', style: TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Tekan tombol di bawah untuk mengisi data contoh ke Firestore (khusus pengembangan).',
-                        style: TextStyle(fontSize: 12, color: WarnaAnggota.grey),
-                      ),
-                      const SizedBox(height: 12),
-                      FilledButton(
-                        style: primaryButton,
-                        onPressed: () async {
-                          try {
-                            await KegiatanService.isiDataContoh();
-                          } on FirebaseException catch (e) {
-                            if (context.mounted) toast(context, 'Gagal: ${e.code}');
-                          }
-                        },
-                        child: const Text('Isi data contoh'),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
 
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -331,33 +299,12 @@ class BerandaPage extends StatelessWidget {
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const UsulanFormPage()),
-                      ),
+                      onPressed: () => bukaUsulan(context),
                       child: const Text('Usulkan'),
                     ),
                   ],
                 ),
               ),
-              // Alat pengembangan: menambah kegiatan hari ini untuk menguji absensi.
-              if (kModeDev) ...[
-                const SizedBox(height: 12),
-                Center(
-                  child: TextButton.icon(
-                    onPressed: () async {
-                      try {
-                        await KegiatanService.tambahKegiatanHariIni();
-                        if (context.mounted) toast(context, 'Kegiatan hari ini ditambahkan');
-                      } on FirebaseException catch (e) {
-                        if (context.mounted) toast(context, 'Gagal: ${e.code}');
-                      }
-                    },
-                    icon: const Icon(Icons.bug_report_outlined, size: 16),
-                    label: const Text('Tambah kegiatan hari ini (uji absensi)', style: TextStyle(fontSize: 12)),
-                  ),
-                ),
-              ],
             ],
           );
         },
@@ -369,7 +316,7 @@ class BerandaPage extends StatelessWidget {
 // =====================================================================
 // 2. KEGIATAN (Mendatang / Selesai)
 // =====================================================================
-// Halaman Kegiatan dengan 3 tab: Mendatang, Selesai, Usulan.
+// Halaman Kegiatan dengan 2 tab: Mendatang dan Selesai.
 class KegiatanPage extends StatefulWidget {
   final ValueChanged<int> onGoTo;
   const KegiatanPage({super.key, required this.onGoTo});
@@ -379,8 +326,8 @@ class KegiatanPage extends StatefulWidget {
 }
 
 class _KegiatanPageState extends State<KegiatanPage> {
-  // Tab yang sedang dipilih: 0 = Mendatang, 1 = Selesai, 2 = Usulan.
-  int _tab = 0; // 0 = Mendatang, 1 = Selesai, 2 = Usulan
+  // Tab yang sedang dipilih: 0 = Mendatang, 1 = Selesai.
+  int _tab = 0; // 0 = Mendatang, 1 = Selesai
 
   // Satu tombol tab. Tab yang aktif berwarna primary, yang lain transparan.
   Widget _tabBtn(String label, IconData icon, int index) {
@@ -431,7 +378,9 @@ class _KegiatanPageState extends State<KegiatanPage> {
             const SizedBox(height: 12),
             // Sudah mendaftar -> tombol 'Terdaftar' (tidak aktif).
             // Belum -> tombol 'Daftar' yang membuka form pendaftaran.
-            if (terdaftar)
+            if (!kFiturKehadiran)
+              const SizedBox.shrink()
+            else if (terdaftar)
               OutlinedButton.icon(
                 onPressed: () {},
                 icon: const Icon(Icons.check_circle_outline, size: 18),
@@ -453,8 +402,8 @@ class _KegiatanPageState extends State<KegiatanPage> {
                 ),
                 child: const Text('Daftar'),
               ),
-            // Absen hanya muncul di hari kegiatan.
-            if (k.hariIni) ...[
+            // Absen hanya muncul di hari kegiatan (dan bila fitur kehadiran aktif).
+            if (kFiturKehadiran && k.hariIni) ...[
               const SizedBox(height: 8),
               absenButton(context, k, sudahAbsen),
             ],
@@ -505,9 +454,9 @@ class _KegiatanPageState extends State<KegiatanPage> {
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      if (hadir)
+                      if (kFiturKehadiran && hadir)
                         const Pill('Kamu Hadir', bg: WarnaAnggota.tertiarySoft, fg: WarnaAnggota.tertiaryDark, icon: Icons.check_circle)
-                      else
+                      else if (kFiturKehadiran)
                         const Pill('Tidak Hadir', bg: WarnaAnggota.bg, fg: WarnaAnggota.grey),
                     ],
                   ),
@@ -552,7 +501,6 @@ class _KegiatanPageState extends State<KegiatanPage> {
                   children: [
                     _tabBtn('Mendatang', Icons.event_outlined, 0),
                     _tabBtn('Selesai', Icons.check_circle_outline, 1),
-                    _tabBtn('Usulan', Icons.lightbulb_outline, 2),
                   ],
                 ),
               ),
@@ -564,9 +512,7 @@ class _KegiatanPageState extends State<KegiatanPage> {
               ] else if (_tab == 1) ...[
                 if (selesai.isEmpty) emptyCard('Belum ada kegiatan yang selesai'),
                 ...selesai.asMap().entries.map((e) => _cardSelesai(e.value, e.key, absen.contains(e.value.id))),
-              ] else
-              // Tab ketiga: Usulan kegiatan (class UsulanTab di bawah).
-                const UsulanTab(),
+              ],
             ],
           );
         },
@@ -987,7 +933,7 @@ class _JadwalPageState extends State<JadwalPage> {
             ),
             const SizedBox(height: 12),
             hadirButton(context, k, sudahHadir, label: 'Saya Akan Hadir', style: primaryButton),
-            if (k.hariIni) ...[
+            if (kFiturKehadiran && k.hariIni) ...[
               const SizedBox(height: 8),
               absenButton(context, k, sudahAbsen),
             ],
@@ -1182,257 +1128,20 @@ class _StatKeaktifanState extends State<StatKeaktifan> {
 }
 
 // =====================================================================
-// USULAN KEGIATAN (tab "Usulan" di halaman Kegiatan)
+// USULAN KEGIATAN -> memakai halaman milik tim (lib/usulan)
 // =====================================================================
-// Isi tab 'Usulan': tombol 'Usulkan Kegiatan' + daftar usulan milik anggota beserta statusnya.
-class UsulanTab extends StatefulWidget {
-  const UsulanTab({super.key});
-
-  @override
-  State<UsulanTab> createState() => _UsulanTabState();
-}
-
-class _UsulanTabState extends State<UsulanTab> {
-  late final Stream<List<UsulanItem>> _stream = KegiatanService.usulanStream();
-
-  // Label status usulan: Menunggu (kuning), Disetujui (hijau), Ditolak (merah).
-  Pill _statusPill(String s) {
-    switch (s) {
-      case 'disetujui':
-        return const Pill('Disetujui', bg: WarnaAnggota.tertiarySoft, fg: WarnaAnggota.tertiaryDark, icon: Icons.check_circle);
-      case 'ditolak':
-        return const Pill('Ditolak', bg: WarnaAnggota.dangerSoft, fg: WarnaAnggota.danger, icon: Icons.cancel);
-      default:
-        return const Pill('Menunggu', bg: WarnaAnggota.secondarySoft, fg: WarnaAnggota.secondaryDark, icon: Icons.hourglass_top);
-    }
-  }
-
-  // Kartu satu usulan: judul, status, deskripsi, perkiraan tanggal, lokasi,
-  // catatan dari sekretaris, dan tombol batalkan (hanya kalau masih menunggu).
-  Widget _card(UsulanItem u) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: AppCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: Text(u.judul, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
-                const SizedBox(width: 8),
-                _statusPill(u.status),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(u.deskripsi,
-                maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: WarnaAnggota.grey)),
-            const SizedBox(height: 6),
-            InfoRow(Icons.calendar_today_outlined, 'Perkiraan: ${u.tanggalTeks}'),
-            InfoRow(Icons.place_outlined, u.lokasi),
-            if (u.peserta > 0) InfoRow(Icons.groups_outlined, '${u.peserta} peserta'),
-            if (u.catatan.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: WarnaAnggota.primarySoft, borderRadius: BorderRadius.circular(10)),
-                child: Text('Catatan sekretaris: ${u.catatan}', style: const TextStyle(fontSize: 12)),
-              ),
-            ],
-            if (u.status == 'menunggu') ...[
-              const SizedBox(height: 4),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  style: TextButton.styleFrom(foregroundColor: WarnaAnggota.danger),
-                  onPressed: () => KegiatanService.hapusUsulan(u.id),
-                  icon: const Icon(Icons.delete_outline, size: 18),
-                  label: const Text('Batalkan usulan'),
-                ),
-              ),
-            ],
-          ],
-        ),
+// Membuka HalamanUsulan yang sudah ada di repo kelompok. Skema Firestore-nya
+// (pengusulUid, status, dukungan, dll) diurus oleh halaman itu, bukan kita.
+Future<void> bukaUsulan(BuildContext context) async {
+  final profil = await UserService.getProfil();
+  if (!context.mounted) return;
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => HalamanUsulan(
+        namaPengguna: (profil?['nama'] ?? '').toString(),
+        peran: (profil?['role'] ?? 'Anggota').toString(),
       ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        FilledButton.icon(
-          style: primaryButton,
-          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UsulanFormPage())),
-          icon: const Icon(Icons.lightbulb_outline, size: 18),
-          label: const Text('Usulkan Kegiatan'),
-        ),
-        const SizedBox(height: 16),
-        const Text('Usulan Saya', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-        const SizedBox(height: 10),
-        StreamBuilder<List<UsulanItem>>(
-          stream: _stream,
-          builder: (context, snap) {
-            if (snap.hasError) return emptyCard('Gagal memuat usulan');
-            if (!snap.hasData) {
-              return const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()));
-            }
-            final list = snap.data!;
-            if (list.isEmpty) return emptyCard('Belum ada usulan. Punya ide? Usulkan ke sekretaris!');
-            return Column(children: list.map(_card).toList());
-          },
-        ),
-      ],
-    );
-  }
-}
-
-// Form untuk mengusulkan kegiatan baru ke sekretaris.
-class UsulanFormPage extends StatefulWidget {
-  const UsulanFormPage({super.key});
-
-  @override
-  State<UsulanFormPage> createState() => _UsulanFormPageState();
-}
-
-class _UsulanFormPageState extends State<UsulanFormPage> {
-  final _judul = TextEditingController();
-  final _deskripsi = TextEditingController();
-  final _tanggalCtrl = TextEditingController();
-  final _lokasi = TextEditingController();
-  final _peserta = TextEditingController();
-  // Tanggal yang dipilih. Tanda '?' artinya boleh kosong (null) sebelum dipilih.
-  DateTime? _tanggal;
-  bool _loading = false;
-
-  @override
-  void dispose() {
-    _judul.dispose();
-    _deskripsi.dispose();
-    _tanggalCtrl.dispose();
-    _lokasi.dispose();
-    _peserta.dispose();
-    super.dispose();
-  }
-
-  // Membuka kalender pop-up (date picker) untuk memilih perkiraan tanggal.
-  Future<void> _pilihTanggal() async {
-    final now = DateTime.now();
-    final d = await showDatePicker(
-      context: context,
-      initialDate: _tanggal ?? now.add(const Duration(days: 7)),
-      firstDate: now,
-      lastDate: now.add(const Duration(days: 365)),
-    );
-    if (d == null || !mounted) return;
-    setState(() {
-      _tanggal = d;
-      _tanggalCtrl.text = '${d.day} ${kBulan[d.month - 1]} ${d.year}';
-    });
-  }
-
-  // Dijalankan saat 'Kirim Usulan' ditekan: cek isian wajib -> simpan ke Firestore (status 'menunggu').
-  Future<void> _kirim() async {
-    if (_judul.text.trim().isEmpty ||
-        _deskripsi.text.trim().isEmpty ||
-        _tanggal == null ||
-        _lokasi.text.trim().isEmpty) {
-      toast(context, 'Judul, deskripsi, tanggal, dan lokasi wajib diisi');
-      return;
-    }
-    setState(() => _loading = true);
-    try {
-      await KegiatanService.kirimUsulan(
-        judul: _judul.text.trim(),
-        deskripsi: _deskripsi.text.trim(),
-        tanggal: _tanggal!,
-        lokasi: _lokasi.text.trim(),
-        peserta: int.tryParse(_peserta.text.trim()) ?? 0,
-      );
-      if (!mounted) return;
-      toast(context, 'Usulan terkirim ke sekretaris');
-      Navigator.pop(context);
-    } on FirebaseException catch (e) {
-      if (mounted) toast(context, 'Gagal mengirim: ${e.code}');
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SubHeader(title: 'Usulkan Kegiatan'),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: WarnaAnggota.primarySoft, borderRadius: BorderRadius.circular(10)),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.info_outline, size: 18, color: WarnaAnggota.primary),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text('Usulanmu akan ditinjau oleh sekretaris. Statusnya bisa kamu lihat di tab Usulan.',
-                              style: TextStyle(fontSize: 12)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const FieldLabel('Judul Kegiatan'),
-                  TextField(controller: _judul, decoration: fieldDec(icon: Icons.title, hint: 'Misal: Bazar Ramadan')),
-                  const FieldLabel('Deskripsi / Tujuan'),
-                  TextField(
-                    controller: _deskripsi,
-                    maxLines: 4,
-                    decoration: fieldDec(hint: 'Jelaskan kegiatan dan manfaatnya untuk warga'),
-                  ),
-                  const FieldLabel('Perkiraan Tanggal'),
-                  TextField(
-                    controller: _tanggalCtrl,
-                    readOnly: true,
-                    onTap: _pilihTanggal,
-                    decoration: fieldDec(icon: Icons.calendar_today_outlined, hint: 'Pilih tanggal'),
-                  ),
-                  const FieldLabel('Lokasi'),
-                  TextField(controller: _lokasi, decoration: fieldDec(icon: Icons.place_outlined, hint: 'Misal: Balai Warga RW 08')),
-                  const FieldLabel('Perkiraan Jumlah Peserta', trailing: 'Opsional'),
-                  TextField(
-                    controller: _peserta,
-                    keyboardType: TextInputType.number,
-                    decoration: fieldDec(icon: Icons.groups_outlined),
-                  ),
-                  const SizedBox(height: 22),
-                  FilledButton(
-                    style: primaryButton,
-                    onPressed: _loading ? null : _kirim,
-                    child: _loading
-                        ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                        : const Text('Kirim Usulan'),
-                  ),
-                  const SizedBox(height: 8),
-                  OutlinedButton(
-                    style: outlineButton,
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Batal'),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+    ),
+  );
 }
