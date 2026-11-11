@@ -10,6 +10,8 @@ import '../../../core/widgets/app_bottom_nav.dart';
 import '../../../core/widgets/hero_card.dart';
 import '../../../core/widgets/stat_card.dart';
 import '../../../core/widgets/event_card.dart';
+import '../../anggota/halaman/galeri_pages.dart';
+import '../../anggota/halaman/kegiatan_pages.dart';
 import '../komponen/komponen_kegiatan_admin.dart';
 import 'halaman_kegiatan_admin.dart';
 import '../../../jadwal/admin/halaman/halaman_jadwal_admin.dart';
@@ -37,6 +39,7 @@ class _HalamanBerandaAdminState extends State<HalamanBerandaAdmin> {
   int _currentIndex = 0;
   String _namaPenggunaReal = '';
   String _peranReal = '';
+  bool _peranSiap = false;
 
   @override
   void initState() {
@@ -48,50 +51,76 @@ class _HalamanBerandaAdminState extends State<HalamanBerandaAdmin> {
 
   // Muat data profil user yang sedang login murni secara real-time dari Cloud Firestore
   void _muatProfilUserRealtime() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-
     try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      if (doc.exists && doc.data() != null) {
-        final data = doc.data()!;
-        final namaCloud = data['nama'] ?? '';
-        final roleCloud = data['role'] ?? data['jabatan'] ?? '';
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid != null) {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+        if (doc.exists && doc.data() != null) {
+          final data = doc.data()!;
+          final namaCloud = data['nama'] ?? '';
+          final roleCloud = data['role'] ?? data['jabatan'] ?? '';
 
-        if (mounted) {
-          setState(() {
-            if (namaCloud.toString().trim().isNotEmpty) {
-              _namaPenggunaReal = namaCloud.toString().trim();
-            }
-            if (roleCloud.toString().trim().isNotEmpty) {
-              _peranReal = AppConstants.normalisasiPeran(roleCloud);
-            }
-          });
+          if (mounted) {
+            setState(() {
+              if (namaCloud.toString().trim().isNotEmpty) {
+                _namaPenggunaReal = namaCloud.toString().trim();
+              }
+              if (roleCloud.toString().trim().isNotEmpty) {
+                _peranReal = AppConstants.normalisasiPeran(roleCloud);
+              }
+            });
+          }
         }
       }
     } catch (e) {
       // Biarkan mengunakan nilai fallback jika gagal
+    } finally {
+      if (mounted) {
+        setState(() {
+          _peranSiap = true;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> pages = [
-      _BerandaTabContent(
-        namaPengguna: _namaPenggunaReal,
-        peran: _peranReal,
-        onPindahTab: (idx) {
-          setState(() {
-            _currentIndex = idx;
-          });
-        },
-      ),
-      const HalamanKegiatanAdmin(),
-      HalamanUsulan(namaPengguna: _namaPenggunaReal, peran: _peranReal),
-      const HalamanJadwalAdmin(),
-      const HalamanAnggotaAdmin(),
-      const HalamanGaleriAdmin(),
-    ];
+    final bool isAnggota = !AppConstants.isPengurus(_peranReal);
+
+    void onGoToEliz(int elizIdx) {
+      const elizMap = {0: 0, 1: 1, 2: 3, 3: 5};
+      setState(() {
+        _currentIndex = elizMap[elizIdx] ?? elizIdx;
+      });
+    }
+
+    final List<Widget> pages = !_peranSiap
+        ? []
+        : isAnggota
+            ? [
+                BerandaPage(onGoTo: onGoToEliz),
+                KegiatanPage(onGoTo: onGoToEliz),
+                HalamanUsulan(namaPengguna: _namaPenggunaReal, peran: _peranReal),
+                const JadwalPage(),
+                const HalamanAnggotaAdmin(),
+                const GaleriPage(),
+              ]
+            : [
+                _BerandaTabContent(
+                  namaPengguna: _namaPenggunaReal,
+                  peran: _peranReal,
+                  onPindahTab: (idx) {
+                    setState(() {
+                      _currentIndex = idx;
+                    });
+                  },
+                ),
+                const HalamanKegiatanAdmin(),
+                HalamanUsulan(namaPengguna: _namaPenggunaReal, peran: _peranReal),
+                const HalamanJadwalAdmin(),
+                const HalamanAnggotaAdmin(),
+                const HalamanGaleriAdmin(),
+              ];
 
     return Scaffold(
       appBar: const AppHeader(title: 'KarangKita'),
@@ -105,7 +134,7 @@ class _HalamanBerandaAdminState extends State<HalamanBerandaAdmin> {
           });
         },
       ),
-      body: pages[_currentIndex],
+      body: !_peranSiap ? const Center(child: CircularProgressIndicator()) : pages[_currentIndex],
       bottomNavigationBar: AppBottomNav(
         currentIndex: _currentIndex,
         onTap: (index) {

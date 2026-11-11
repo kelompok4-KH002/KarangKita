@@ -536,6 +536,7 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
     }
 
     final listFiltered = _getFiltered();
+    final bool isPengurusUser = AppConstants.isPengurus(_currentUserRole);
 
     return Scaffold(
       body: Column(
@@ -622,12 +623,14 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _bukaModalForm(),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.textWhite,
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: isPengurusUser
+          ? FloatingActionButton(
+              onPressed: () => _bukaModalForm(),
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.textWhite,
+              child: const Icon(Icons.add),
+            )
+          : null,
     );
   }
 
@@ -658,7 +661,7 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
               padding: const EdgeInsets.only(bottom: 8),
               child: InkWell(
                 borderRadius: AppRadius.r10,
-                onTap: pemegang != null ? () => _bukaModalForm(pemegang) : null,
+                onTap: (pemegang != null && AppConstants.isPengurus(_currentUserRole)) ? () => _bukaModalForm(pemegang) : null,
                 child: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
@@ -712,10 +715,12 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
   }
 
   Widget _buildMemberCard(ModelAnggotaAdmin item) {
+    final bool isPengurusUser = AppConstants.isPengurus(_currentUserRole);
     // Tombol Hapus X hanya tampil jika diperbolehkan:
     // - Ketua/Admin: untuk semua akun selain dirinya
     // - Pengurus (Sekretaris/Bendahara/Pengurus): hanya untuk akun Anggota
-    final bool bolehHapus = item.id != _currentUserId &&
+    final bool bolehHapus = isPengurusUser &&
+        item.id != _currentUserId &&
         (_isKetuaOrAdmin || item.jabatan == 'Anggota');
 
     return Container(
@@ -778,15 +783,17 @@ class _HalamanAnggotaAdminState extends State<HalamanAnggotaAdmin> {
           ),
 
           // Action Buttons: Edit (Pensil) & Hapus (X)
-          IconButton(
-            icon: const Icon(Icons.edit_outlined, size: 20, color: AppColors.primary),
-            onPressed: () => _bukaModalForm(item),
-          ),
-          if (bolehHapus)
+          if (isPengurusUser) ...[
             IconButton(
-              icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.primary),
-              onPressed: () => _hapusAnggota(item),
+              icon: const Icon(Icons.edit_outlined, size: 20, color: AppColors.primary),
+              onPressed: () => _bukaModalForm(item),
             ),
+            if (bolehHapus)
+              IconButton(
+                icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.primary),
+                onPressed: () => _hapusAnggota(item),
+              ),
+          ],
         ],
       ),
     );
