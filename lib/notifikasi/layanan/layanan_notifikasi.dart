@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'layanan_email.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -57,6 +59,19 @@ class LayananNotifikasi {
         'dibuatOleh': FirebaseAuth.instance.currentUser?.uid,
         'createdAt': FieldValue.serverTimestamp(),
       });
+
+      // Kirim juga ke email penerima. Tidak ditunggu, dan kegagalannya
+      // tidak boleh menggagalkan aksi utama.
+      unawaited(
+        LayananEmail.kirimKeEmail(
+          penerima: penerima,
+          judul: judul,
+          isi: isi,
+          tipe: tipe,
+        ).catchError((e) {
+          debugPrint('Gagal mengirim email: $e');
+        }),
+      );
     } catch (e) {
       debugPrint('Gagal mengirim notifikasi: $e');
     }
