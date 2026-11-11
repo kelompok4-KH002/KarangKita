@@ -447,13 +447,15 @@ class _HalamanUsulanState extends State<HalamanUsulan> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _ajukanUsulan,
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.textWhite,
-        icon: const Icon(Icons.lightbulb_outline),
-        label: const Text('Usulkan'),
-      ),
+      floatingActionButton: _isKetua
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: _ajukanUsulan,
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.textWhite,
+              icon: const Icon(Icons.lightbulb_outline),
+              label: const Text('Usulkan'),
+            ),
     );
   }
 
