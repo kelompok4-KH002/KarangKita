@@ -42,7 +42,7 @@ class HalamanPanelPengurus extends StatelessWidget {
       body: !isPengurusInti
           ? _buildAksesDitolak()
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 32.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -246,9 +246,12 @@ class HalamanPanelPengurus extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => HalamanUsulan(
-                      namaPengguna: namaPengguna,
-                      peran: peran,
+                    builder: (_) => Scaffold(
+                      appBar: const AppHeader(title: 'Usulan Kegiatan'),
+                      body: HalamanUsulan(
+                        namaPengguna: namaPengguna,
+                        peran: peran,
+                      ),
                     ),
                   ),
                 );
@@ -511,7 +514,10 @@ class HalamanPanelPengurus extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const HalamanAnggotaAdmin(),
+                    builder: (_) => const Scaffold(
+                      appBar: AppHeader(title: 'Kelola Anggota'),
+                      body: HalamanAnggotaAdmin(),
+                    ),
                   ),
                 );
               },
