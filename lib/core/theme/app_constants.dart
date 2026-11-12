@@ -42,10 +42,13 @@ class AppConstants {
     'Anggota',
   ];
 
-  // Data lama bisa berisi 'Warga' atau kosong -> dianggap Anggota
+  // Data lama bisa berisi 'Warga' atau 'Ketua Pengurus' atau kosong -> dinormalisasi
   static String normalisasiPeran(Object? peran) {
     final p = (peran ?? '').toString().trim();
     if (p.isEmpty || p == 'Warga') return 'Anggota';
+    if (p == 'Ketua Pengurus' || p.startsWith('Ketua')) return 'Ketua';
+    if (p == 'Sekretaris Pengurus' || p.startsWith('Sekretaris')) return 'Sekretaris';
+    if (p == 'Bendahara Pengurus' || p.startsWith('Bendahara')) return 'Bendahara';
     return p;
   }
 
@@ -59,5 +62,8 @@ class AppConstants {
   }
 
   // Hanya Ketua (dan Admin lama) yang mengelola keanggotaan
-  static bool bolehKelolaKeanggotaan(String peran) => peran == 'Ketua' || peran == 'Admin';
+  static bool bolehKelolaKeanggotaan(String peran) {
+    final p = normalisasiPeran(peran);
+    return p == 'Ketua' || p == 'Admin';
+  }
 }

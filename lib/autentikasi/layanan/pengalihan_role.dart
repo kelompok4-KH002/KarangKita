@@ -272,12 +272,11 @@ class LayananAutentikasi {
       );
     }
 
-    final emailSynthetis = u.contains('@') ? u : '$u@karangkita.app';
+    final emailAddress = u.contains('@') ? u : '$u@karangkita.app';
 
     try {
-      // login auth
       final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: emailSynthetis,
+        email: emailAddress,
         password: p,
       );
 
@@ -285,17 +284,15 @@ class LayananAutentikasi {
         final userEmail = cred.user!.email ?? '';
         final isLegacy = userEmail.endsWith('@karangkita.app');
 
-        // Pengecekan verifikasi email: Akun non-legacy wajib verifikasi email
         if (!isLegacy && !cred.user!.emailVerified) {
           await FirebaseAuth.instance.signOut();
           return HasilAutentikasi(
             sukses: false,
-            pesan: 'Email belum diverifikasi. Silakan periksa kotak masuk email Anda.',
+            pesan: 'Email belum diverifikasi. Silakan periksa kotak masuk email Anda (cek juga folder Spam).',
             belumVerifikasi: true,
           );
         }
 
-        // cek status disetujui di firestore
         final doc = await FirebaseFirestore.instance.collection('users').doc(cred.user!.uid).get();
 
         if (doc.exists) {
@@ -303,7 +300,6 @@ class LayananAutentikasi {
           final roleStr = AppConstants.normalisasiPeran(doc.data()?['role'] ?? 'Pengurus');
 
           if (!isDisetujui && roleStr == 'Pengurus') {
-            // Wajib signOut() terlebih dahulu jika belum disetujui
             await FirebaseAuth.instance.signOut();
             return HasilAutentikasi(
               sukses: false,
@@ -320,7 +316,6 @@ class LayananAutentikasi {
             role: role,
           );
         } else {
-          // Dokumen users tidak ditemukan di Firestore: Wajib signOut()
           await FirebaseAuth.instance.signOut();
           return HasilAutentikasi(
             sukses: false,
@@ -332,6 +327,8 @@ class LayananAutentikasi {
       String pesanErr = 'Email/Username atau password tidak cocok.';
       if (e.code == 'invalid-email') {
         pesanErr = 'Format email tidak valid.';
+      } else if (e.code == 'too-many-requests' || e.message?.contains('blocked') == true) {
+        pesanErr = 'Banyak percobaan login terdeteksi. Silakan tunggu beberapa menit lagi sebelum mencoba kembali.';
       } else if (e.code == 'user-not-found' || e.code == 'wrong-password' || e.code == 'invalid-credential') {
         pesanErr = 'Email/Username atau password tidak cocok.';
       } else if (e.code == 'network-request-failed') {
