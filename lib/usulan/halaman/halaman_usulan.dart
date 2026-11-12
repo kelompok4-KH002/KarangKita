@@ -371,8 +371,9 @@ class _HalamanUsulanState extends State<HalamanUsulan> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
+      body: SafeArea(
+        child: Column(
+          children: [
           SizedBox(
             height: 56,
             child: ListView(
@@ -447,13 +448,16 @@ class _HalamanUsulanState extends State<HalamanUsulan> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _ajukanUsulan,
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.textWhite,
-        icon: const Icon(Icons.lightbulb_outline),
-        label: const Text('Usulkan'),
-      ),
+    ),
+      floatingActionButton: _isKetua
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: _ajukanUsulan,
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.textWhite,
+              icon: const Icon(Icons.lightbulb_outline),
+              label: const Text('Usulkan'),
+            ),
     );
   }
 

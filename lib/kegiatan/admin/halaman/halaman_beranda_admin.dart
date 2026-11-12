@@ -10,6 +10,7 @@ import '../../../core/widgets/app_bottom_nav.dart';
 import '../../../core/widgets/hero_card.dart';
 import '../../../core/widgets/stat_card.dart';
 import '../../../core/widgets/event_card.dart';
+import '../../../autentikasi/layanan/layanan_email_akun.dart';
 import '../../anggota/halaman/galeri_pages.dart';
 import '../../anggota/halaman/kegiatan_pages.dart';
 import '../komponen/komponen_kegiatan_admin.dart';
@@ -72,6 +73,7 @@ class _HalamanBerandaAdminState extends State<HalamanBerandaAdmin> {
           }
         }
       }
+      LayananEmailAkun.sinkronkanEmail();
     } catch (e) {
       // Biarkan mengunakan nilai fallback jika gagal
     } finally {
