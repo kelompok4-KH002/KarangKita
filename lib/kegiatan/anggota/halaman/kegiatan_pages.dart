@@ -220,7 +220,7 @@ class BerandaPage extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         NamaPengguna(prefix: 'Halo, ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                        Text('Warga RT 03 / RW 08', style: TextStyle(color: WarnaAnggota.grey, fontSize: 12)),
+                        Text('Anggota Karang Taruna', style: TextStyle(color: WarnaAnggota.grey, fontSize: 12)),
                       ],
                     ),
                   ),
