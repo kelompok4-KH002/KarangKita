@@ -8,6 +8,7 @@ import '../../core/widgets/category_chip.dart';
 import '../../iuran/halaman/halaman_iuran.dart';
 import '../../iuran/model/model_iuran.dart';
 import '../../kegiatan/admin/halaman/halaman_anggota_admin.dart';
+import '../../patungan/halaman/halaman_patungan_bendahara.dart';
 import '../../usulan/halaman/halaman_usulan.dart';
 
 // Halaman Panel Pengurus Gabungan (Ketua, Sekretaris, Bendahara)
@@ -267,6 +268,8 @@ class HalamanPanelPengurus extends StatelessWidget {
 
   // Bagian b: Keuangan & Iuran (Bendahara & Ketua)
   Widget _buildBagianKeuangan(BuildContext context) {
+    final bool isBendahara = AppConstants.normalisasiPeran(peran) == 'Bendahara';
+
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
@@ -380,28 +383,59 @@ class HalamanPanelPengurus extends StatelessWidget {
             },
           ),
           const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.textWhite,
-                shape: RoundedRectangleBorder(borderRadius: AppRadius.r8),
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => HalamanIuran(
-                      namaPengguna: namaPengguna,
-                      peran: peran,
-                    ),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.textWhite,
+                    shape: RoundedRectangleBorder(borderRadius: AppRadius.r8),
                   ),
-                );
-              },
-              icon: const Icon(Icons.arrow_forward, size: 16),
-              label: const Text('Buka Iuran', style: AppTextStyles.buttonPrimary),
-            ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => HalamanIuran(
+                          namaPengguna: namaPengguna,
+                          peran: peran,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.arrow_forward, size: 16),
+                  label: Text(
+                    isBendahara ? 'Kelola Iuran' : 'Pantau Iuran',
+                    style: AppTextStyles.buttonPrimary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    shape: RoundedRectangleBorder(borderRadius: AppRadius.r8),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => HalamanPatunganBendahara(
+                          peran: peran,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.volunteer_activism_outlined, size: 16),
+                  label: Text(
+                    isBendahara ? 'Kelola Patungan' : 'Lihat Patungan',
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

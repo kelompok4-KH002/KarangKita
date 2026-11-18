@@ -11,10 +11,12 @@ import '../../notifikasi/komponen/ikon_notifikasi.dart';
 // AppHeader Seragam (Hamburger Kiri, Title KarangKita, Profile Kanan dengan Popup & Confirm Logout)
 class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   final String title;
+  final bool? showBackButton;
 
   const AppHeader({
     super.key,
     this.title = 'KarangKita',
+    this.showBackButton,
   });
 
   @override
@@ -65,14 +67,22 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool canPop = showBackButton ?? Navigator.canPop(context);
+
     return AppBar(
-      leading: IconButton(
-        icon: const Icon(Icons.menu, color: AppColors.textPrimary),
-        tooltip: 'Buka Menu',
-        onPressed: () {
-          Scaffold.of(context).openDrawer();
-        },
-      ),
+      leading: canPop
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+              tooltip: 'Kembali',
+              onPressed: () => Navigator.pop(context),
+            )
+          : IconButton(
+              icon: const Icon(Icons.menu, color: AppColors.textPrimary),
+              tooltip: 'Buka Menu',
+              onPressed: () {
+                Scaffold.of(context).openDrawer();
+              },
+            ),
       title: Text(
         title,
         style: AppTextStyles.headerTitle,

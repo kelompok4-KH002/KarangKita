@@ -214,7 +214,7 @@ class PhotoPlaceholder extends StatelessWidget {
   }
 }
 
-// Header di bagian atas halaman utama:  [ikon] Judul ............ [lonceng] [avatar]
+// Header di bagian atas halaman utama:  [ikon] Judul
 class PageHeader extends StatelessWidget {
   final String title;
   final IconData? icon;
@@ -225,7 +225,7 @@ class PageHeader extends StatelessWidget {
     super.key,
     required this.title,
     this.icon,
-    this.bell = true,
+    this.bell = false,
     this.avatar = false,
     this.trailing,
   });
@@ -272,12 +272,6 @@ class SubHeader extends StatelessWidget {
         children: [
           IconButton(onPressed: () => Navigator.pop(context, false), icon: const Icon(Icons.arrow_back)),
           Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const Spacer(),
-          const CircleAvatar(
-            radius: 16,
-            backgroundColor: WarnaAnggota.primary,
-            child: Icon(Icons.person, size: 18, color: Colors.white),
-          ),
         ],
       ),
     );
