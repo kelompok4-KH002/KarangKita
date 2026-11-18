@@ -220,11 +220,10 @@ class BerandaPage extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         NamaPengguna(prefix: 'Halo, ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                        Text('Warga RT 03 / RW 08', style: TextStyle(color: WarnaAnggota.grey, fontSize: 12)),
+                        Text('Anggota Karang Taruna', style: TextStyle(color: WarnaAnggota.grey, fontSize: 12)),
                       ],
                     ),
                   ),
-                  IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_none)),
                 ],
               ),
               const SizedBox(height: 20),
@@ -488,7 +487,7 @@ class _KegiatanPageState extends State<KegiatanPage> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              const PageHeader(title: 'Kegiatan', icon: Icons.event_note, avatar: true),
+              const PageHeader(title: 'Kegiatan', icon: Icons.event_note),
               const SizedBox(height: 14),
               Container(
                 padding: const EdgeInsets.all(4),
@@ -1138,9 +1137,14 @@ Future<void> bukaUsulan(BuildContext context) async {
   Navigator.push(
     context,
     MaterialPageRoute(
-      builder: (_) => HalamanUsulan(
-        namaPengguna: (profil?['nama'] ?? '').toString(),
-        peran: (profil?['role'] ?? 'Anggota').toString(),
+      builder: (_) => Scaffold(
+        appBar: AppBar(
+          title: const Text('Usulan Kegiatan'),
+        ),
+        body: HalamanUsulan(
+          namaPengguna: (profil?['nama'] ?? '').toString(),
+          peran: (profil?['role'] ?? 'Anggota').toString(),
+        ),
       ),
     ),
   );

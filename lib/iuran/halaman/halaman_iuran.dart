@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_constants.dart';
@@ -29,11 +30,10 @@ class _HalamanIuranState extends State<HalamanIuran> with SingleTickerProviderSt
   late TabController _tabController;
 
   String get _uid => FirebaseAuth.instance.currentUser?.uid ?? '';
-  bool get _isBendaharaAtauKetua =>
-      widget.peran == 'Bendahara' ||
-      widget.peran == 'Ketua' ||
-      widget.peran == 'Admin' ||
-      AppConstants.bolehKelolaKeanggotaan(widget.peran);
+  String get _peranNorm => AppConstants.normalisasiPeran(widget.peran);
+  bool get _isBendahara => _peranNorm == 'Bendahara';
+  bool get _isKetua => _peranNorm == 'Ketua' || _peranNorm == 'Admin';
+  bool get _isBendaharaAtauKetua => _isBendahara || _isKetua || AppConstants.bolehKelolaKeanggotaan(widget.peran);
 
   CollectionReference<Map<String, dynamic>> get _colIuran =>
       FirebaseFirestore.instance.collection('iuran');
@@ -222,6 +222,201 @@ class _HalamanIuranState extends State<HalamanIuran> with SingleTickerProviderSt
     );
   }
 
+  // ---- Form Pengaturan Rekening & QRIS Dinamis (Bendahara / Ketua) ----
+
+  Future<void> _tampilkanFormPengaturanRekeningQris() async {
+    final docRef = _colIuran.doc('pengaturan_rekening');
+    final docSnap = await docRef.get();
+    final dataAwal = docSnap.data() ?? {};
+
+    final penyediaCtrl = TextEditingController(text: (dataAwal['namaPenyedia'] ?? 'BCA').toString());
+    final noRekCtrl = TextEditingController(text: (dataAwal['nomorRekening'] ?? '85714471028').toString());
+    final atasNamaCtrl = TextEditingController(text: (dataAwal['atasNama'] ?? 'Bendahara Karang Taruna').toString());
+    final ketCtrl = TextEditingController(text: (dataAwal['keterangan'] ?? 'DANA / OVO: 085714471028').toString());
+
+    XFile? qrisFileBaru;
+    String qrisUrlLama = (dataAwal['qrisUrl'] ?? '').toString();
+    bool mengunggah = false;
+
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.r20),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.qr_code_scanner, color: AppColors.primary),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text('Atur QRIS & Rekening', style: AppTextStyles.formTitle),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: mengunggah ? null : () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  const Text('Nama Bank / E-Wallet', style: AppTextStyles.inputLabel),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: penyediaCtrl,
+                    decoration: InputDecoration(
+                      hintText: 'Misal: BCA / Bank Mandiri / DANA',
+                      border: OutlineInputBorder(borderRadius: AppRadius.r10),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  const Text('Nomor Rekening / No. HP', style: AppTextStyles.inputLabel),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: noRekCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      hintText: 'Contoh: 85714471028',
+                      border: OutlineInputBorder(borderRadius: AppRadius.r10),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  const Text('Atas Nama (Pemilik Rekening)', style: AppTextStyles.inputLabel),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: atasNamaCtrl,
+                    decoration: InputDecoration(
+                      hintText: 'Nama lengkap di rekening',
+                      border: OutlineInputBorder(borderRadius: AppRadius.r10),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  const Text('Keterangan Tambahan', style: AppTextStyles.inputLabel),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: ketCtrl,
+                    decoration: InputDecoration(
+                      hintText: 'Misal: DANA / OVO: 085714471028',
+                      border: OutlineInputBorder(borderRadius: AppRadius.r10),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  const Text('Foto QRIS Pembayaran (Opsional)', style: AppTextStyles.inputLabel),
+                  const SizedBox(height: 6),
+                  InkWell(
+                    onTap: mengunggah
+                        ? null
+                        : () async {
+                            final picker = ImagePicker();
+                            final img = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+                            if (img != null) {
+                              setDialogState(() => qrisFileBaru = img);
+                            }
+                          },
+                    child: Container(
+                      width: double.infinity,
+                      height: 130,
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        border: Border.all(color: AppColors.cardBorder),
+                        borderRadius: AppRadius.r10,
+                      ),
+                      child: qrisFileBaru != null
+                          ? Center(
+                              child: Text(
+                                'Terpilih foto QRIS baru:\n${qrisFileBaru!.name}',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 12),
+                              ),
+                            )
+                          : qrisUrlLama.isNotEmpty
+                              ? ClipRRect(
+                                  borderRadius: AppRadius.r10,
+                                  child: Image.network(qrisUrlLama, fit: BoxFit.contain),
+                                )
+                              : const Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.qr_code_2_outlined, size: 36, color: AppColors.primary),
+                                    SizedBox(height: 6),
+                                    Text('Ketuk untuk upload foto QRIS dari Galeri', style: AppTextStyles.cardSubtitle),
+                                  ],
+                                ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 46,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: AppColors.textWhite,
+                        shape: RoundedRectangleBorder(borderRadius: AppRadius.r12),
+                      ),
+                      onPressed: mengunggah
+                          ? null
+                          : () async {
+                              setDialogState(() => mengunggah = true);
+
+                              String qrisUrlSimpan = qrisUrlLama;
+                              if (qrisFileBaru != null) {
+                                final res = await LayananCloudinary.unggahGambar(qrisFileBaru!);
+                                if (res != null) {
+                                  qrisUrlSimpan = res['secure_url'] ?? qrisUrlLama;
+                                }
+                              }
+
+                              try {
+                                await docRef.set({
+                                  'namaPenyedia': penyediaCtrl.text.trim(),
+                                  'nomorRekening': noRekCtrl.text.trim(),
+                                  'atasNama': atasNamaCtrl.text.trim(),
+                                  'keterangan': ketCtrl.text.trim(),
+                                  'qrisUrl': qrisUrlSimpan,
+                                  'updatedAt': FieldValue.serverTimestamp(),
+                                }, SetOptions(merge: true));
+
+                                if (!context.mounted) return;
+                                Navigator.pop(context);
+                                _snack('Pengaturan Rekening & QRIS berhasil disimpan');
+                              } catch (e) {
+                                setDialogState(() => mengunggah = false);
+                                _snack('Gagal menyimpan pengaturan: $e', error: true);
+                              }
+                            },
+                      icon: mengunggah
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(color: AppColors.textWhite, strokeWidth: 2),
+                            )
+                          : const Icon(Icons.save_outlined, size: 18),
+                      label: const Text('Simpan Pengaturan', style: AppTextStyles.buttonPrimary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   // ---- Form Pembayaran Iuran (Anggota) ----
 
   Future<void> _tampilkanFormBayar(ModelIuran iuran) async {
@@ -286,6 +481,115 @@ class _HalamanIuranState extends State<HalamanIuran> with SingleTickerProviderSt
                 ),
                 const SizedBox(height: 14),
                 if (metode == 'Transfer') ...[
+                  // Card Informasi Rekening & QRIS Tujuan Transfer Dinamis dari Firestore
+                  StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                    stream: _colIuran.doc('pengaturan_rekening').snapshots(),
+                    builder: (context, snapRek) {
+                      final dRek = snapRek.data?.data() ?? {};
+                      final bankPenyedia = (dRek['namaPenyedia'] ?? 'BCA').toString();
+                      final noRek = (dRek['nomorRekening'] ?? '85714471028').toString();
+                      final atasNama = (dRek['atasNama'] ?? 'Bendahara Karang Taruna').toString();
+                      final ketTambahan = (dRek['keterangan'] ?? 'DANA / OVO: 085714471028').toString();
+                      final qrisUrl = (dRek['qrisUrl'] ?? '').toString();
+
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryLight,
+                          borderRadius: AppRadius.r10,
+                          border: Border.all(color: AppColors.cardBorder),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.account_balance_outlined, size: 18, color: AppColors.primary),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text('Rekening & QRIS Tujuan ($bankPenyedia)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primary)),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+
+                            // Foto QRIS jika diunggah oleh Bendahara
+                            if (qrisUrl.isNotEmpty) ...[
+                              Center(
+                                child: GestureDetector(
+                                  onTap: () => _lihatBuktiFoto(qrisUrl),
+                                  child: Container(
+                                    height: 140,
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: AppRadius.r10,
+                                      border: Border.all(color: AppColors.cardBorder),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: AppRadius.r10,
+                                      child: Image.network(qrisUrl, fit: BoxFit.contain),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              const Center(
+                                child: Text('Ketuk gambar QRIS untuk memperbesar / scan', style: TextStyle(fontSize: 10, color: AppColors.textMuted, fontStyle: FontStyle.italic)),
+                              ),
+                              const SizedBox(height: 8),
+                            ],
+
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('$bankPenyedia: $noRek', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                      if (ketTambahan.isNotEmpty)
+                                        Text(ketTambahan, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                      Text('A.n: $atasNama', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                    ],
+                                  ),
+                                ),
+                                InkWell(
+                                  onTap: () {
+                                    Clipboard.setData(ClipboardData(text: noRek));
+                                    _snack('Nomor rekening disalin');
+                                  },
+                                  borderRadius: AppRadius.r8,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary,
+                                      borderRadius: AppRadius.r8,
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.copy, size: 12, color: AppColors.textWhite),
+                                        SizedBox(width: 4),
+                                        Text('Salin', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textWhite)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Silakan transfer sesuai nominal iuran di atas, lalu unggah bukti transfer di bawah ini.',
+                              style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 14),
+
                   Text('Bukti Transfer (JPG/PNG, Maks 5 MB)', style: AppTextStyles.inputLabel),
                   const SizedBox(height: 6),
                   InkWell(
@@ -322,6 +626,45 @@ class _HalamanIuranState extends State<HalamanIuran> with SingleTickerProviderSt
                                 Text('Ketuk untuk unggah foto bukti transfer', style: AppTextStyles.cardSubtitle),
                               ],
                             ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ] else if (metode == 'Tunai') ...[
+                  // Card Penjelasan Pembayaran Tunai
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.badgeGreenBg,
+                      borderRadius: AppRadius.r10,
+                      border: Border.all(color: AppColors.cardBorder),
+                    ),
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.payments_outlined, size: 18, color: AppColors.badgeGreenText),
+                            SizedBox(width: 8),
+                            Text('Petunjuk Pembayaran Tunai', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.badgeGreenText)),
+                          ],
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          '1. Serahkan uang tunai secara langsung kepada Bendahara / Pengurus Karang Taruna.',
+                          style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          '2. Klik "Kirim Pembayaran" di bawah ini agar sistem mencatat konfirmasi bayar Anda.',
+                          style: TextStyle(fontSize: 12, color: AppColors.textPrimary),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          '3. Bendahara akan memverifikasi (ACC Lunas) tagihan Anda di sistem setelah uang diterima.',
+                          style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.bold),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -548,7 +891,7 @@ class _HalamanIuranState extends State<HalamanIuran> with SingleTickerProviderSt
           _buildTabRiwayatSaya(),
         ],
       ),
-      floatingActionButton: _isBendaharaAtauKetua
+      floatingActionButton: _isBendahara
           ? FloatingActionButton.extended(
               onPressed: _tampilkanFormBuatTagihan,
               backgroundColor: AppColors.primary,
@@ -567,7 +910,10 @@ class _HalamanIuranState extends State<HalamanIuran> with SingleTickerProviderSt
       builder: (context, snapIuran) {
         if (!snapIuran.hasData) return const Center(child: CircularProgressIndicator());
 
-        final daftarIuran = snapIuran.data!.docs.map(ModelIuran.dariDoc).toList();
+        final daftarIuran = snapIuran.data!.docs
+            .where((d) => d.id != 'pengaturan_rekening')
+            .map(ModelIuran.dariDoc)
+            .toList();
         if (daftarIuran.isEmpty) {
           return const Center(child: Text('Belum ada tagihan iuran', style: AppTextStyles.statLabel));
         }
@@ -624,18 +970,32 @@ class _HalamanIuranState extends State<HalamanIuran> with SingleTickerProviderSt
                           backgroundColor: AppColors.primary,
                           child: Icon(Icons.account_balance_wallet, color: AppColors.textWhite),
                         ),
-                        const SizedBox(width: 14),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Total Dana Terkumpul', style: AppTextStyles.cardSubtitle),
-                            const SizedBox(height: 2),
-                            Text(
-                              _formatRupiah(grandTotalTerkumpul),
-                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary),
-                            ),
-                          ],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Total Dana Terkumpul', style: AppTextStyles.cardSubtitle),
+                              const SizedBox(height: 2),
+                              Text(
+                                _formatRupiah(grandTotalTerkumpul),
+                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary),
+                              ),
+                            ],
+                          ),
                         ),
+                        if (_isBendahara)
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.primary,
+                              side: const BorderSide(color: AppColors.primary),
+                              shape: RoundedRectangleBorder(borderRadius: AppRadius.r8),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            ),
+                            onPressed: _tampilkanFormPengaturanRekeningQris,
+                            icon: const Icon(Icons.qr_code_scanner, size: 16),
+                            label: const Text('Atur QRIS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                          ),
                       ],
                     ),
                   ),
@@ -765,27 +1125,46 @@ class _HalamanIuranState extends State<HalamanIuran> with SingleTickerProviderSt
                     ),
                     const SizedBox(height: 10),
                   ],
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
-                        onPressed: () => _verifikasiPembayaran(p, 'Ditolak'),
-                        icon: const Icon(Icons.close, size: 16),
-                        label: const Text('Tolak'),
-                      ),
-                      const SizedBox(width: 10),
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.badgeGreenText,
-                          foregroundColor: AppColors.textWhite,
+                  if (_isBendahara)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
+                          onPressed: () => _verifikasiPembayaran(p, 'Ditolak'),
+                          icon: const Icon(Icons.close, size: 16),
+                          label: const Text('Tolak'),
                         ),
-                        onPressed: () => _verifikasiPembayaran(p, 'Lunas'),
-                        icon: const Icon(Icons.check, size: 16),
-                        label: const Text('ACC Lunas'),
-                      ),
-                    ],
-                  ),
+                        const SizedBox(width: 10),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.badgeGreenText,
+                            foregroundColor: AppColors.textWhite,
+                          ),
+                          onPressed: () => _verifikasiPembayaran(p, 'Lunas'),
+                          icon: const Icon(Icons.check, size: 16),
+                          label: const Text('ACC Lunas'),
+                        ),
+                      ],
+                    )
+                  else
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryLight,
+                            borderRadius: AppRadius.r8,
+                            border: Border.all(color: AppColors.cardBorder),
+                          ),
+                          child: const Text(
+                            'Mode Monitoring Ketua',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
             );
