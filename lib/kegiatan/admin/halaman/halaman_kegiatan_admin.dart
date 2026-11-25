@@ -196,6 +196,113 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
     );
   }
 
+  Future<void> _bukaModalSetKodeAbsen(ModelKegiatanAdmin item) async {
+    final docKodeRef = FirebaseFirestore.instance.collection('kodeAbsen').doc(item.id);
+    final snapKode = await docKodeRef.get();
+    final kodeLama = (snapKode.data()?['kode'] ?? '').toString();
+
+    final kodeCtrl = TextEditingController(text: kodeLama.isNotEmpty ? kodeLama : '1234');
+    bool menyimpan = false;
+
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.r16),
+          title: const Row(
+            children: [
+              Icon(Icons.qr_code_2_outlined, color: AppColors.primary),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text('Buka Absensi Kegiatan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Kegiatan: ${item.judul}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const SizedBox(height: 12),
+              const Text('Kode Rahasia Absensi (4 Digit/Teks)', style: AppTextStyles.inputLabel),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: kodeCtrl,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                decoration: InputDecoration(
+                  hintText: 'Contoh: 1234 atau 7890',
+                  border: OutlineInputBorder(borderRadius: AppRadius.r10),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Beritahukan kode ini hanya kepada warga/anggota yang hadir di lokasi kegiatan.',
+                style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal', style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.textWhite,
+                shape: RoundedRectangleBorder(borderRadius: AppRadius.r8),
+              ),
+              onPressed: menyimpan
+                  ? null
+                  : () async {
+                      final kodeInput = kodeCtrl.text.trim();
+                      if (kodeInput.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Kode absensi tidak boleh kosong'), backgroundColor: AppColors.danger),
+                        );
+                        return;
+                      }
+
+                      setModalState(() => menyimpan = true);
+
+                      try {
+                        await docKodeRef.set({
+                          'kegiatanId': item.id,
+                          'kode': kodeInput,
+                          'updatedAt': FieldValue.serverTimestamp(),
+                        }, SetOptions(merge: true));
+
+                        await FirebaseFirestore.instance.collection('kegiatan').doc(item.id).update({
+                          'absensiDibuka': true,
+                        });
+
+                        if (!mounted) return;
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Absensi berhasil dibuka! Kode: $kodeInput')),
+                        );
+                      } catch (e) {
+                        setModalState(() => menyimpan = false);
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Gagal membuka absensi: $e'), backgroundColor: AppColors.danger),
+                        );
+                      }
+                    },
+              icon: menyimpan
+                  ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: AppColors.textWhite, strokeWidth: 2))
+                  : const Icon(Icons.check, size: 16),
+              label: const Text('Buka Absensi'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   IconData _getKategoriIcon(String kategori) {
     switch (kategori) {
       case 'Olahraga':
@@ -500,6 +607,36 @@ class _HalamanKegiatanAdminState extends State<HalamanKegiatanAdmin> {
                 ),
               ),
               const SizedBox(width: 8),
+
+              // Buka Absensi Button (Khusus Kegiatan Mendatang)
+              if (!isSelesai) ...[
+                InkWell(
+                  onTap: () => _bukaModalSetKodeAbsen(item),
+                  borderRadius: AppRadius.r8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.badgeGreenBg,
+                      borderRadius: AppRadius.r8,
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.qr_code_2, size: 16, color: AppColors.badgeGreenText),
+                        SizedBox(width: 4),
+                        Text(
+                          'Buka Absensi',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.badgeGreenText,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
 
               // Edit Button
               InkWell(

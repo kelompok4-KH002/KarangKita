@@ -9,6 +9,8 @@ import '../../core/widgets/category_chip.dart';
 import '../../core/widgets/event_card.dart';
 import '../../kegiatan/admin/halaman/halaman_detail_kegiatan.dart';
 import '../../kegiatan/admin/komponen/komponen_kegiatan_admin.dart';
+import '../../kegiatan/anggota/halaman/galeri_pages.dart';
+import '../../kegiatan/anggota/layanan/kegiatan_service.dart';
 import '../../patungan/layanan/layanan_patungan.dart';
 import '../../patungan/model/model_patungan.dart';
 
@@ -159,10 +161,106 @@ class HalamanBerandaTamu extends StatelessWidget {
               ..._bagian(context, 'Kegiatan Mendatang', mendatang, 'Belum ada kegiatan mendatang'),
               const SizedBox(height: 8),
               ..._bagian(context, 'Kegiatan Selesai', selesai, 'Belum ada kegiatan selesai'),
+              _buildBagianGaleriTamu(context),
             ],
           );
         },
       ),
+    );
+  }
+
+  Widget _buildBagianGaleriTamu(BuildContext context) {
+    return FutureBuilder<List<AlbumGaleri>>(
+      future: KegiatanService.albumFuture(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError || !snapshot.hasData) {
+          return const SizedBox.shrink();
+        }
+
+        final albums = snapshot.data ?? [];
+        if (albums.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 12),
+            const Text('Dokumentasi Kegiatan', style: AppTextStyles.cardTitle),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 150,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: albums.length,
+                itemBuilder: (context, i) {
+                  final album = albums[i];
+                  return GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => AlbumPage(album: album)),
+                    ),
+                    child: Container(
+                      width: 140,
+                      margin: const EdgeInsets.only(right: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: AppRadius.r12,
+                        border: Border.all(color: AppColors.cardBorder),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: AppColors.cardShadow,
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ClipRRect(
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                            child: SizedBox(
+                              height: 90,
+                              width: double.infinity,
+                              child: album.sampul != null
+                                  ? Image.network(album.sampul!, fit: BoxFit.cover)
+                                  : Container(
+                                      color: AppColors.primaryLight,
+                                      child: const Icon(Icons.collections, color: AppColors.primary, size: 28),
+                                    ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  album.judul,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${album.fotos.length} Foto',
+                                  style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        );
+      },
     );
   }
 
