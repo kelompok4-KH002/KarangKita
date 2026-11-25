@@ -27,7 +27,7 @@ import '../pendukung_anggota.dart';
 //   false = fitur disembunyikan & tidak menyentuh Firestore.
 //   true  = aktifkan. Hanya diubah oleh pemegang Rules, setelah Rules untuk
 //           'pendaftaran', 'kehadiran', 'absensi' dipublish dan dites.
-const bool kFiturKehadiran = false;
+const bool kFiturKehadiran = true;
 
 // Nama hari. Index 0 = Senin (sesuai DateTime.weekday - 1).
 const List<String> kHariNama = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
@@ -137,7 +137,8 @@ class GaleriFoto {
 
   factory GaleriFoto.fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> d) {
     final m = d.data();
-    final album = (m['album'] ?? 'Umum').toString();
+    final album = (m['album'] ?? m['judul'] ?? 'Umum').toString();
+    final url = (m['downloadURL'] ?? m['imageUrl'] ?? m['url'] ?? m['fotoUrl'] ?? m['secure_url'] ?? '').toString();
     return GaleriFoto(
       id: d.id,
       albumId: (m['albumId'] ?? album).toString(),
@@ -145,7 +146,7 @@ class GaleriFoto {
       tanggalAlbum: (m['tanggalAlbum'] ?? '').toString(),
       urutan: (m['urutan'] as num?)?.toInt() ?? 0,
       deskripsi: (m['deskripsi'] ?? m['keterangan'] ?? '').toString(),
-      url: (m['downloadURL'] ?? m['imageUrl'] ?? '').toString(),
+      url: url,
     );
   }
 }
@@ -198,29 +199,130 @@ class KegiatanService {
   // ---------------- Galeri (baca saja) ----------------
   // Semua foto dari collection 'galeri', dikelompokkan per album (albumId).
   static Stream<List<AlbumGaleri>> albumStream() {
-    return _db.collection('galeri').orderBy('createdAt', descending: true).snapshots().map((s) {
+    return _db.collection('galeri').snapshots().map((s) {
       final peta = <String, List<GaleriFoto>>{};
       for (final d in s.docs) {
+        final m = d.data();
+
+        // 1. Cek jika dokumen merupakan Album dengan array 'fotos'
+        if (m['fotos'] is List && (m['fotos'] as List).isNotEmpty) {
+          final listFotosRaw = m['fotos'] as List;
+          final String albumId = d.id;
+          final String judulAlbum = (m['judul'] ?? m['album'] ?? 'Album Kegiatan').toString();
+          final String tglAlbum = (m['tanggalAlbum'] ?? '').toString();
+
+          for (int i = 0; i < listFotosRaw.length; i++) {
+            final item = listFotosRaw[i];
+            if (item is Map) {
+              final url = (item['url'] ?? item['downloadURL'] ?? item['imageUrl'] ?? item['secure_url'] ?? '').toString();
+              if (url.isNotEmpty) {
+                peta.putIfAbsent(albumId, () => []).add(
+                  GaleriFoto(
+                    id: (item['id'] ?? '${albumId}_$i').toString(),
+                    albumId: albumId,
+                    album: judulAlbum,
+                    tanggalAlbum: tglAlbum,
+                    urutan: i,
+                    deskripsi: (item['caption'] ?? item['deskripsi'] ?? '').toString(),
+                    url: url,
+                  ),
+                );
+              }
+            }
+          }
+        }
+
+        // 2. Cek jika dokumen tunggal foto (Format HalamanGaleriAdmin)
         final f = GaleriFoto.fromDoc(d);
-        peta.putIfAbsent(f.albumId, () => []).add(f);
+        if (f.url.isNotEmpty) {
+          peta.putIfAbsent(f.albumId, () => []).add(f);
+        }
       }
-      final hasil = peta.values.map((fotos) {
+
+      final hasil = peta.entries.map((entry) {
+        final fotos = entry.value;
         fotos.sort((a, b) => a.urutan.compareTo(b.urutan));
         final f = fotos.first;
         final t = DateTime.tryParse(f.tanggalAlbum);
-        final teksTanggal = t == null ? f.tanggalAlbum : '${t.day} ${kBulanSingkat[t.month - 1]} ${t.year}';
+        final teksTanggal = t == null
+            ? (f.tanggalAlbum.isNotEmpty ? f.tanggalAlbum : 'Dokumentasi')
+            : '${t.day} ${kBulanSingkat[t.month - 1]} ${t.year}';
+
         return AlbumGaleri(
-          albumId: f.albumId,
-          judul: f.album,
+          albumId: entry.key,
+          judul: f.album.isNotEmpty ? f.album : 'Album Kegiatan',
           tanggal: teksTanggal,
           tanggalIso: f.tanggalAlbum,
           fotos: fotos,
         );
       }).toList();
-      // Urutan sama seperti halaman galeri admin: tanggal album terbaru di atas.
-      hasil.sort((a, b) => b.tanggalIso.compareTo(a.tanggalIso));
+
       return hasil;
     });
+  }
+
+  static Future<List<AlbumGaleri>> albumFuture() async {
+    try {
+      final s = await _db.collection('galeri').get();
+      final peta = <String, List<GaleriFoto>>{};
+      for (final d in s.docs) {
+        final m = d.data();
+
+        if (m['fotos'] is List && (m['fotos'] as List).isNotEmpty) {
+          final listFotosRaw = m['fotos'] as List;
+          final String albumId = d.id;
+          final String judulAlbum = (m['judul'] ?? m['album'] ?? 'Album Kegiatan').toString();
+          final String tglAlbum = (m['tanggalAlbum'] ?? '').toString();
+
+          for (int i = 0; i < listFotosRaw.length; i++) {
+            final item = listFotosRaw[i];
+            if (item is Map) {
+              final url = (item['url'] ?? item['downloadURL'] ?? item['imageUrl'] ?? item['secure_url'] ?? '').toString();
+              if (url.isNotEmpty) {
+                peta.putIfAbsent(albumId, () => []).add(
+                  GaleriFoto(
+                    id: (item['id'] ?? '${albumId}_$i').toString(),
+                    albumId: albumId,
+                    album: judulAlbum,
+                    tanggalAlbum: tglAlbum,
+                    urutan: i,
+                    deskripsi: (item['caption'] ?? item['deskripsi'] ?? '').toString(),
+                    url: url,
+                  ),
+                );
+              }
+            }
+          }
+        }
+
+        final f = GaleriFoto.fromDoc(d);
+        if (f.url.isNotEmpty) {
+          peta.putIfAbsent(f.albumId, () => []).add(f);
+        }
+      }
+
+      final hasil = peta.entries.map((entry) {
+        final fotos = entry.value;
+        fotos.sort((a, b) => a.urutan.compareTo(b.urutan));
+        final f = fotos.first;
+        final t = DateTime.tryParse(f.tanggalAlbum);
+        final teksTanggal = t == null
+            ? (f.tanggalAlbum.isNotEmpty ? f.tanggalAlbum : 'Dokumentasi')
+            : '${t.day} ${kBulanSingkat[t.month - 1]} ${t.year}';
+
+        return AlbumGaleri(
+          albumId: entry.key,
+          judul: f.album.isNotEmpty ? f.album : 'Album Kegiatan',
+          tanggal: teksTanggal,
+          tanggalIso: f.tanggalAlbum,
+          fotos: fotos,
+        );
+      }).toList();
+
+      return hasil;
+    } catch (e) {
+      return [];
+    }
   }
 
   // ---------------- Pendaftaran / RSVP / Absensi (DITUNDA) ----------------

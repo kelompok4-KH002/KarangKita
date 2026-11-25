@@ -3,6 +3,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/category_chip.dart';
 import '../../../peta/komponen/komponen_peta.dart';
+import '../../anggota/halaman/galeri_pages.dart';
+import '../../anggota/layanan/kegiatan_service.dart';
 import '../komponen/komponen_kegiatan_admin.dart';
 
 // Halaman rincian kegiatan lengkap dengan peta lokasi
@@ -92,10 +94,108 @@ class HalamanDetailKegiatan extends StatelessWidget {
                     style: AppTextStyles.cardSubtitle,
                   ),
                 ),
+              const SizedBox(height: 18),
+              _buildSeksiFotoDokumentasi(context),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSeksiFotoDokumentasi(BuildContext context) {
+    return StreamBuilder<List<AlbumGaleri>>(
+      stream: KegiatanService.albumStream(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const SizedBox.shrink();
+
+        final albums = snapshot.data ?? [];
+        final String judulLower = kegiatan.judul.trim().toLowerCase();
+
+        // Cari album yang judul/albumId-nya mirip atau persis dengan kegiatan ini
+        final List<GaleriFoto> fotosCocok = [];
+        for (final album in albums) {
+          final aJudul = album.judul.trim().toLowerCase();
+          final aId = album.albumId.trim().toLowerCase();
+          if (aJudul.contains(judulLower) || judulLower.contains(aJudul) || aId == kegiatan.id) {
+            fotosCocok.addAll(album.fotos);
+          }
+        }
+
+        // Pencocokan ketat: HANYA gunakan foto dari album yang benar-benar cocok dengan kegiatan ini
+        final List<GaleriFoto> fotoTampil = fotosCocok;
+
+        if (fotoTampil.isEmpty) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Foto Dokumentasi Kegiatan', style: AppTextStyles.inputLabel),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: AppRadius.r10,
+                  border: Border.all(color: AppColors.cardBorder),
+                ),
+                child: const Text(
+                  'Belum ada foto dokumentasi yang diunggah untuk kegiatan ini.',
+                  style: AppTextStyles.cardSubtitle,
+                ),
+              ),
+            ],
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text('Foto Dokumentasi Kegiatan', style: AppTextStyles.inputLabel),
+                const Spacer(),
+                Text('${fotoTampil.length} Foto', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: fotoTampil.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                mainAxisSpacing: 6,
+                crossAxisSpacing: 6,
+              ),
+              itemBuilder: (context, i) {
+                final foto = fotoTampil[i];
+                return GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => FotoViewerPage(fotos: fotoTampil, index: i),
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: AppRadius.r8,
+                    child: Image.network(
+                      foto.url,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (_, child, progress) =>
+                          progress == null ? child : const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                      errorBuilder: (_, __, ___) => Container(
+                        color: AppColors.primaryLight,
+                        child: const Icon(Icons.broken_image_outlined, color: AppColors.textMuted),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 
