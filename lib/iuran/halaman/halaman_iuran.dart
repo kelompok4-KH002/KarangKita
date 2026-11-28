@@ -420,15 +420,18 @@ class _HalamanIuranState extends State<HalamanIuran> with SingleTickerProviderSt
   // ---- Modal Dialog Simulasi Midtrans Snap Payment Gateway ----
 
   Future<void> _bukaModalMidtransSnap(ModelIuran iuran) async {
-    final orderId = 'ORDER-KK-${DateTime.now().millisecondsSinceEpoch.toString().substring(4)}';
-    String kanalTerpilih = 'BCA Virtual Account';
+    final orderId = 'MID-${DateTime.now().millisecondsSinceEpoch.toString().substring(3)}';
+    String kanalTerpilih = 'GoPay / GoPay Later';
     bool memproses = false;
 
     final Map<String, String> noKanal = {
+      'GoPay / GoPay Later': 'gopay_85714471028',
+      'GoPay QRIS': 'qris_midtrans_85714471028',
       'BCA Virtual Account': '8830185714471028',
       'Mandiri Bill Payment': '8930185714471028',
       'BRI Virtual Account': '9930185714471028',
-      'GoPay / QRIS Midtrans': 'QRIS-MIDTRANS-SNAP-857144',
+      'BNI Virtual Account': '7730185714471028',
+      'ShopeePay / SPayLater': 'shopeepay_85714471028',
     };
 
     if (!mounted) return;
@@ -438,123 +441,161 @@ class _HalamanIuranState extends State<HalamanIuran> with SingleTickerProviderSt
       barrierDismissible: false,
       builder: (context) => StatefulBuilder(
         builder: (context, setSnapState) => Dialog(
-          shape: RoundedRectangleBorder(borderRadius: AppRadius.r20),
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.r16),
+          backgroundColor: Colors.white,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
           child: Container(
             width: double.infinity,
+            maxWidth: 420,
             padding: const EdgeInsets.all(20),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Midtrans Header Badge
+                  // Snap Header Bar: Brand KarangKita
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0052CC),
-                          borderRadius: AppRadius.r8,
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.bolt, color: Colors.white, size: 16),
-                            SizedBox(width: 4),
-                            Text('midtrans', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white)),
-                          ],
+                      const Text(
+                        'KarangKita',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E293B),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      const Text('Snap Payment', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                       const Spacer(),
                       IconButton(
-                        icon: const Icon(Icons.close),
+                        icon: const Icon(Icons.close, size: 20, color: AppColors.textSecondary),
                         onPressed: memproses ? null : () => Navigator.pop(context),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
 
-                  // Order Summary Card
+                  // Order Summary Section
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.background,
+                      color: const Color(0xFFF8FAFC),
                       borderRadius: AppRadius.r10,
-                      border: Border.all(color: AppColors.cardBorder),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Order ID: $orderId', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                        const SizedBox(height: 2),
-                        Text('Tagihan: ${iuran.judul}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                        const SizedBox(height: 4),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Total Pembayaran:', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                             Text(
                               _formatRupiah(iuran.nominal),
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0052CC)),
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                            const Text('Rincian ▾', style: TextStyle(fontSize: 12, color: Color(0xFF0284C7), fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text('Order ID #$orderId', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                            const SizedBox(width: 4),
+                            InkWell(
+                              onTap: () {
+                                Clipboard.setData(ClipboardData(text: orderId));
+                                _snack('Order ID disalin');
+                              },
+                              child: const Icon(Icons.copy, size: 12, color: Color(0xFF0284C7)),
                             ),
                           ],
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 16),
 
-                  const Text('Pilih Metode Pembayaran Midtrans', style: AppTextStyles.inputLabel),
+                  const Text(
+                    'Semua metode bayar',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Interactive Methods Selector Card List
+                  _buildOptionItem(
+                    title: 'GoPay/GoPay Later',
+                    subtitle: 'gopay • gopay later',
+                    isSelected: kanalTerpilih == 'GoPay / GoPay Later',
+                    onTap: () => setSnapState(() => kanalTerpilih = 'GoPay / GoPay Later'),
+                  ),
                   const SizedBox(height: 8),
 
-                  DropdownButtonFormField<String>(
-                    value: kanalTerpilih,
-                    decoration: InputDecoration(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      border: OutlineInputBorder(borderRadius: AppRadius.r10),
-                    ),
-                    items: noKanal.keys
-                        .map((k) => DropdownMenuItem(value: k, child: Text(k, style: const TextStyle(fontSize: 13))))
-                        .toList(),
-                    onChanged: memproses ? null : (val) {
-                      if (val != null) setSnapState(() => kanalTerpilih = val);
-                    },
+                  _buildOptionItem(
+                    title: 'GoPay QRIS',
+                    subtitle: 'gopay • gopay later • QRIS',
+                    isSelected: kanalTerpilih == 'GoPay QRIS',
+                    onTap: () => setSnapState(() => kanalTerpilih = 'GoPay QRIS'),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
 
-                  // Display Virtual Account / QRIS Number
+                  _buildOptionItem(
+                    title: 'BCA Virtual Account',
+                    subtitle: 'BCA VA: 8830185714471028',
+                    isSelected: kanalTerpilih == 'BCA Virtual Account',
+                    onTap: () => setSnapState(() => kanalTerpilih = 'BCA Virtual Account'),
+                  ),
+                  const SizedBox(height: 8),
+
+                  _buildOptionItem(
+                    title: 'Mandiri / BRI / BNI Virtual Account',
+                    subtitle: 'Mandiri / BRI / BNI VA',
+                    isSelected: kanalTerpilih == 'Mandiri Bill Payment',
+                    onTap: () => setSnapState(() => kanalTerpilih = 'Mandiri Bill Payment'),
+                  ),
+                  const SizedBox(height: 8),
+
+                  _buildOptionItem(
+                    title: 'ShopeePay / SPayLater',
+                    subtitle: 'ShopeePay Instant Settlement',
+                    isSelected: kanalTerpilih == 'ShopeePay / SPayLater',
+                    onTap: () => setSnapState(() => kanalTerpilih = 'ShopeePay / SPayLater'),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Selected Channel Details
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.primaryLight,
+                      color: const Color(0xFFF0F9FF),
                       borderRadius: AppRadius.r10,
-                      border: Border.all(color: AppColors.cardBorder),
+                      border: Border.all(color: const Color(0xFFBAE6FD)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('$kanalTerpilih Number:', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                        Text('Metode Terpilih: $kanalTerpilih', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0369A1))),
                         const SizedBox(height: 4),
                         Row(
                           children: [
                             Expanded(
                               child: Text(
                                 noKanal[kanalTerpilih] ?? '',
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary),
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                               ),
                             ),
                             InkWell(
                               onTap: () {
                                 Clipboard.setData(ClipboardData(text: noKanal[kanalTerpilih] ?? ''));
-                                _snack('Nomor Midtrans disalin');
+                                _snack('Kode disalin');
                               },
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary,
+                                  color: const Color(0xFF0284C7),
                                   borderRadius: AppRadius.r6,
                                 ),
                                 child: const Text('Salin', style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold)),
@@ -562,11 +603,8 @@ class _HalamanIuranState extends State<HalamanIuran> with SingleTickerProviderSt
                             ),
                           ],
                         ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'Simulasi Midtrans Sandbox: Klik tombol di bawah untuk memproses instant settlement.',
-                          style: TextStyle(fontSize: 10, color: AppColors.textMuted),
-                        ),
+                        const SizedBox(height: 4),
+                        const Text('Midtrans Sandbox: Otomatis Lunas tanpa perlu upload bukti manual.', style: TextStyle(fontSize: 10, color: Color(0xFF64748B))),
                       ],
                     ),
                   ),
@@ -575,12 +613,13 @@ class _HalamanIuranState extends State<HalamanIuran> with SingleTickerProviderSt
                   // Button Process Midtrans Payment
                   SizedBox(
                     width: double.infinity,
-                    height: 46,
-                    child: ElevatedButton.icon(
+                    height: 48,
+                    child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0052CC),
+                        backgroundColor: const Color(0xFF383942), // Matches Midtrans Custom Button Color #383942
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: AppRadius.r12),
+                        shape: RoundedRectangleBorder(borderRadius: AppRadius.r10),
+                        elevation: 0,
                       ),
                       onPressed: memproses
                           ? null
@@ -597,7 +636,78 @@ class _HalamanIuranState extends State<HalamanIuran> with SingleTickerProviderSt
                                   metode: 'Midtrans ($kanalTerpilih)',
                                   buktiUrl: '',
                                   status: 'Lunas',
-                                  catatan: 'Order ID: $orderId (Midtrans Snap Instant Settlement)',
+                                  catatan: 'Order ID: #$orderId (Midtrans Snap Instant Settlement)',
+                                );
+
+                                await _colPembayaran.doc(idPembayaran).set(bayar.keMap());
+
+                                await LayananNotifikasi.kirim(
+                                  penerima: [LayananNotifikasi.kePeran('Bendahara')],
+                                  judul: 'Pembayaran Midtrans Lunas',
+                                  isi: '${widget.namaPengguna} membayar "${iuran.judul}" via Midtrans $kanalTerpilih.',
+                                  tipe: 'iuran',
+                                );
+
+                                if (!mounted) return;
+                                Navigator.pop(context);
+                                _snack('Pembayaran Midtrans Berhasil! Status: Settlement (Lunas)');
+                              } catch (e) {
+                                setSnapState(() => memproses = false);
+                                _snack('Gagal memproses Midtrans: $e', error: true);
+                              }
+                            },
+                      child: memproses
+                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : const Text('Bayar Sekarang', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOptionItem({
+    required String title,
+    required String subtitle,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: AppRadius.r10,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFF0F9FF) : Colors.white,
+          borderRadius: AppRadius.r10,
+          border: Border.all(color: isSelected ? const Color(0xFF0284C7) : const Color(0xFFE2E8F0), width: isSelected ? 1.5 : 1.0),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: const TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                ],
+              ),
+            ),
+            Icon(
+              isSelected ? Icons.check_circle : Icons.chevron_right,
+              color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
+              size: 18,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
                                 );
 
                                 await _colPembayaran.doc(idPembayaran).set(bayar.keMap());
