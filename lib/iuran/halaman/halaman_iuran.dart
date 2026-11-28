@@ -417,6 +417,221 @@ class _HalamanIuranState extends State<HalamanIuran> with SingleTickerProviderSt
     );
   }
 
+  // ---- Modal Dialog Simulasi Midtrans Snap Payment Gateway ----
+
+  Future<void> _bukaModalMidtransSnap(ModelIuran iuran) async {
+    final orderId = 'ORDER-KK-${DateTime.now().millisecondsSinceEpoch.toString().substring(4)}';
+    String kanalTerpilih = 'BCA Virtual Account';
+    bool memproses = false;
+
+    final Map<String, String> noKanal = {
+      'BCA Virtual Account': '8830185714471028',
+      'Mandiri Bill Payment': '8930185714471028',
+      'BRI Virtual Account': '9930185714471028',
+      'GoPay / QRIS Midtrans': 'QRIS-MIDTRANS-SNAP-857144',
+    };
+
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSnapState) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.r20),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Midtrans Header Badge
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0052CC),
+                          borderRadius: AppRadius.r8,
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.bolt, color: Colors.white, size: 16),
+                            SizedBox(width: 4),
+                            Text('midtrans', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text('Snap Payment', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: memproses ? null : () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Order Summary Card
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: AppRadius.r10,
+                      border: Border.all(color: AppColors.cardBorder),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Order ID: $orderId', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                        const SizedBox(height: 2),
+                        Text('Tagihan: ${iuran.judul}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Total Pembayaran:', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                            Text(
+                              _formatRupiah(iuran.nominal),
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0052CC)),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  const Text('Pilih Metode Pembayaran Midtrans', style: AppTextStyles.inputLabel),
+                  const SizedBox(height: 8),
+
+                  DropdownButtonFormField<String>(
+                    value: kanalTerpilih,
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      border: OutlineInputBorder(borderRadius: AppRadius.r10),
+                    ),
+                    items: noKanal.keys
+                        .map((k) => DropdownMenuItem(value: k, child: Text(k, style: const TextStyle(fontSize: 13))))
+                        .toList(),
+                    onChanged: memproses ? null : (val) {
+                      if (val != null) setSnapState(() => kanalTerpilih = val);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Display Virtual Account / QRIS Number
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryLight,
+                      borderRadius: AppRadius.r10,
+                      border: Border.all(color: AppColors.cardBorder),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('$kanalTerpilih Number:', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                noKanal[kanalTerpilih] ?? '',
+                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary),
+                              ),
+                            ),
+                            InkWell(
+                              onTap: () {
+                                Clipboard.setData(ClipboardData(text: noKanal[kanalTerpilih] ?? ''));
+                                _snack('Nomor Midtrans disalin');
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  borderRadius: AppRadius.r6,
+                                ),
+                                child: const Text('Salin', style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold)),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Simulasi Midtrans Sandbox: Klik tombol di bawah untuk memproses instant settlement.',
+                          style: TextStyle(fontSize: 10, color: AppColors.textMuted),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Button Process Midtrans Payment
+                  SizedBox(
+                    width: double.infinity,
+                    height: 46,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0052CC),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: AppRadius.r12),
+                      ),
+                      onPressed: memproses
+                          ? null
+                          : () async {
+                              setSnapState(() => memproses = true);
+
+                              try {
+                                final idPembayaran = 'bayar_${iuran.id}_$_uid';
+                                final bayar = ModelPembayaran(
+                                  id: idPembayaran,
+                                  iuranId: iuran.id,
+                                  uidAnggota: _uid,
+                                  namaAnggota: widget.namaPengguna,
+                                  metode: 'Midtrans ($kanalTerpilih)',
+                                  buktiUrl: '',
+                                  status: 'Lunas',
+                                  catatan: 'Order ID: $orderId (Midtrans Snap Instant Settlement)',
+                                );
+
+                                await _colPembayaran.doc(idPembayaran).set(bayar.keMap());
+
+                                await LayananNotifikasi.kirim(
+                                  penerima: [LayananNotifikasi.kePeran('Bendahara')],
+                                  judul: 'Pembayaran Midtrans Lunas',
+                                  isi: '${widget.namaPengguna} membayar "${iuran.judul}" via Midtrans $kanalTerpilih.',
+                                  tipe: 'iuran',
+                                );
+
+                                if (!mounted) return;
+                                Navigator.pop(context);
+                                _snack('Pembayaran Midtrans Berhasil! Status: Settlement (Lunas)');
+                              } catch (e) {
+                                setSnapState(() => memproses = false);
+                                _snack('Gagal memproses Midtrans: $e', error: true);
+                              }
+                            },
+                      icon: memproses
+                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : const Icon(Icons.check_circle_outline, size: 18),
+                      label: const Text('Simulasi Bayar Midtrans (Sandbox)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   // ---- Form Pembayaran Iuran (Anggota) ----
 
   Future<void> _tampilkanFormBayar(ModelIuran iuran) async {
@@ -444,9 +659,38 @@ class _HalamanIuranState extends State<HalamanIuran> with SingleTickerProviderSt
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Konfirmasi Bayar: ${iuran.judul}', style: AppTextStyles.formTitle),
-                const SizedBox(height: 4),
-                Text('Nominal: ${_formatRupiah(iuran.nominal)}', style: AppTextStyles.cardSubtitle),
+                Text('Konfirmasi Pembayaran Iuran', style: AppTextStyles.formTitle),
+                const SizedBox(height: 2),
+                Text(iuran.judul, style: AppTextStyles.cardSubtitle),
+                const SizedBox(height: 12),
+
+                // Card Highlighting Nominal Tagihan (Besar & Jelas seperti Patungan)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight,
+                    borderRadius: AppRadius.r12,
+                    border: Border.all(color: AppColors.cardBorder),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Nominal Pembayaran:',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                      ),
+                      Text(
+                        _formatRupiah(iuran.nominal),
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 16),
                 Text('Metode Pembayaran', style: AppTextStyles.inputLabel),
                 const SizedBox(height: 6),
@@ -454,7 +698,7 @@ class _HalamanIuranState extends State<HalamanIuran> with SingleTickerProviderSt
                   children: [
                     Expanded(
                       child: ChoiceChip(
-                        label: const Center(child: Text('Transfer')),
+                        label: const Center(child: Text('Transfer', style: TextStyle(fontSize: 11))),
                         selected: metode == 'Transfer',
                         onSelected: mengunggah ? null : (_) => setModalState(() => metode = 'Transfer'),
                         selectedColor: AppColors.primary,
@@ -464,10 +708,10 @@ class _HalamanIuranState extends State<HalamanIuran> with SingleTickerProviderSt
                         ),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: ChoiceChip(
-                        label: const Center(child: Text('Tunai')),
+                        label: const Center(child: Text('Tunai', style: TextStyle(fontSize: 11))),
                         selected: metode == 'Tunai',
                         onSelected: mengunggah ? null : (_) => setModalState(() => metode = 'Tunai'),
                         selectedColor: AppColors.primary,
@@ -477,10 +721,83 @@ class _HalamanIuranState extends State<HalamanIuran> with SingleTickerProviderSt
                         ),
                       ),
                     ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: ChoiceChip(
+                        label: const Center(child: Text('Midtrans', style: TextStyle(fontSize: 11))),
+                        selected: metode == 'Midtrans',
+                        onSelected: mengunggah ? null : (_) => setModalState(() => metode = 'Midtrans'),
+                        selectedColor: const Color(0xFF0052CC),
+                        labelStyle: TextStyle(
+                          color: metode == 'Midtrans' ? AppColors.textWhite : AppColors.textSecondary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 14),
-                if (metode == 'Transfer') ...[
+                if (metode == 'Midtrans') ...[
+                  // Card Midtrans Gateway Checkout
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F265C),
+                      borderRadius: AppRadius.r12,
+                      border: Border.all(color: const Color(0xFF0052CC)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: AppRadius.r6,
+                              ),
+                              child: const Row(
+                                children: [
+                                  Icon(Icons.bolt, color: Color(0xFF0052CC), size: 16),
+                                  SizedBox(width: 4),
+                                  Text('midtrans', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F265C))),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text('Snap Payment Gateway', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Pembayaran otomatis via Virtual Account Bank (BCA, Mandiri, BRI, BNI), QRIS, atau GoPay.',
+                          style: TextStyle(color: Colors.white70, fontSize: 11),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 42,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF0052CC),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: AppRadius.r8),
+                            ),
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _bukaModalMidtransSnap(iuran);
+                            },
+                            icon: const Icon(Icons.payment, size: 16),
+                            label: const Text('Buka Midtrans Snap Checkout', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ] else if (metode == 'Transfer') ...[
                   // Card Informasi Rekening & QRIS Tujuan Transfer Dinamis dari Firestore
                   StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
                     stream: _colIuran.doc('pengaturan_rekening').snapshots(),
@@ -828,6 +1145,153 @@ class _HalamanIuranState extends State<HalamanIuran> with SingleTickerProviderSt
     }
   }
 
+  // ---- Modal Rincian Anggota yang Sudah Lunas ----
+
+  void _bukaModalDaftarAnggotaLunas(ModelIuran iuran, List<ModelPembayaran> listBayar) {
+    final lunasList = listBayar.where((p) => p.iuranId == iuran.id && p.status == 'Lunas').toList();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.check_circle, color: AppColors.badgeGreenText, size: 22),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('Rincian Pelunasan: ${iuran.judul}', style: AppTextStyles.formTitle),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                borderRadius: AppRadius.r10,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Total Terkumpul (${lunasList.length} anggota):', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  Text(
+                    _formatRupiah(lunasList.length * iuran.nominal),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            if (lunasList.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Center(child: Text('Belum ada anggota yang melunasi tagihan ini', style: AppTextStyles.statLabel)),
+              )
+            else
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.4),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: lunasList.length,
+                  itemBuilder: (context, i) {
+                    final p = lunasList[i];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: AppRadius.r10,
+                        border: Border.all(color: AppColors.cardBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          const CircleAvatar(
+                            radius: 16,
+                            backgroundColor: AppColors.badgeGreenBg,
+                            child: Icon(Icons.person, size: 18, color: AppColors.badgeGreenText),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(p.namaAnggota, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                Text('${p.metode} • ${_formatTanggal(p.dibuat)}', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                if (p.catatan.isNotEmpty)
+                                  Text(p.catatan, style: const TextStyle(fontSize: 10, color: AppColors.textMuted, fontStyle: FontStyle.italic)),
+                              ],
+                            ),
+                          ),
+                          CategoryChip(kategori: 'Lunas'),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---- Reset Data Pembayaran Testing (Bendahara / Ketua) ----
+
+  void _konfirmasiResetDataPembayaran() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.r16),
+        title: const Row(
+          children: [
+            Icon(Icons.cleaning_services_outlined, color: AppColors.danger),
+            SizedBox(width: 8),
+            Text('Reset Data Testing?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          ],
+        ),
+        content: const Text(
+          'Tindakan ini akan menghapus seluruh data pembayaran testing sehingga Total Dana Terkumpul kembali menjadi Rp 0 untuk persiapan demo bersih.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger, foregroundColor: AppColors.textWhite),
+            onPressed: () async {
+              Navigator.pop(context);
+              try {
+                final snap = await _colPembayaran.get();
+                final batch = FirebaseFirestore.instance.batch();
+                for (var doc in snap.docs) {
+                  batch.delete(doc.reference);
+                }
+                await batch.commit();
+                _snack('Data pembayaran berhasil di-reset menjadi Rp 0.');
+              } catch (e) {
+                _snack('Gagal mereset data pembayaran: $e', error: true);
+              }
+            },
+            child: const Text('Reset Data'),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ---- Detail Bukti Transfer (Modal Preview Foto) ----
 
   void _lihatBuktiFoto(String url) {
@@ -984,7 +1448,7 @@ class _HalamanIuranState extends State<HalamanIuran> with SingleTickerProviderSt
                             ],
                           ),
                         ),
-                        if (_isBendahara)
+                        if (_isBendahara) ...[
                           OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.primary,
@@ -996,6 +1460,13 @@ class _HalamanIuranState extends State<HalamanIuran> with SingleTickerProviderSt
                             icon: const Icon(Icons.qr_code_scanner, size: 16),
                             label: const Text('Atur QRIS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                           ),
+                          const SizedBox(width: 4),
+                          IconButton(
+                            icon: const Icon(Icons.cleaning_services_outlined, size: 18, color: AppColors.danger),
+                            tooltip: 'Reset Data Testing Pembayaran',
+                            onPressed: _konfirmasiResetDataPembayaran,
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -1018,12 +1489,19 @@ class _HalamanIuranState extends State<HalamanIuran> with SingleTickerProviderSt
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             CategoryChip(kategori: statusSaya),
-                            const Spacer(),
-                            Text(
-                              _formatRupiah(iuran.nominal),
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primary),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryLight,
+                                borderRadius: AppRadius.r8,
+                              ),
+                              child: Text(
+                                _formatRupiah(iuran.nominal),
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.primary),
+                              ),
                             ),
                           ],
                         ),
@@ -1034,10 +1512,29 @@ class _HalamanIuranState extends State<HalamanIuran> with SingleTickerProviderSt
                           'Jatuh Tempo: ${_formatTanggal(iuran.jatuhTempo)} • Dibuat oleh ${iuran.dibuatOleh}',
                           style: AppTextStyles.cardSubtitle,
                         ),
-                        if (_isBendaharaAtauKetua) ...[
-                          const SizedBox(height: 6),
-                          Text('$lunasCount anggota telah melunasi', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                        ],
+                        const SizedBox(height: 6),
+                        InkWell(
+                          onTap: () => _bukaModalDaftarAnggotaLunas(
+                            iuran,
+                            snapBayar.data!.docs.map(ModelPembayaran.dariDoc).toList(),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '$lunasCount anggota telah melunasi',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.bold,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.arrow_forward_ios, size: 10, color: AppColors.primary),
+                            ],
+                          ),
+                        ),
                         const SizedBox(height: 12),
                         Row(
                           children: [
